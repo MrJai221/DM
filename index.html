@@ -2,933 +2,1305 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DriveMate — roadside, redefined.</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DriveMate — Roadside Partner</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
-
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-    }
-  }
-  </script>
-
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html{scroll-behavior:smooth}
     :root{
-      --bg:#06070A;--surface:#0B0E16;--card:rgba(16,20,34,0.65);--card-hover:rgba(26,32,54,0.8);
-      --border:rgba(255,255,255,0.05);--border-active:rgba(255,91,30,0.5);
-      --orange:#FF5B1E;--orange-soft:rgba(255,91,30,0.1);
-      --green:#10B981;--purple:#8B5CF6;--text:#ECEEF6;--muted:#7C84A0;
+      --bg:#FFFFFF;--surface:#F8F9FC;--card:rgba(255,255,255,0.85);--card-hover:rgba(255,255,255,0.95);
+      --border:rgba(0,0,0,0.06);--border-active:rgba(255,91,30,0.5);
+      --orange:#FF5B1E;--orange-soft:rgba(255,91,30,0.08);--orange-light:rgba(255,91,30,0.04);
+      --green:#10B981;--purple:#8B5CF6;--text:#1A1D26;--text-secondary:#6B7280;--muted:#9CA3AF;
+      --shadow-sm:0 1px 3px rgba(0,0,0,0.04);--shadow-md:0 8px 30px rgba(0,0,0,0.06);--shadow-lg:0 20px 60px rgba(0,0,0,0.08);--shadow-xl:0 30px 80px rgba(0,0,0,0.1);
       --font-display:'Space Grotesk',sans-serif;--font-body:'Inter',sans-serif;--font-mono:'IBM Plex Mono',monospace;
-      --radius:18px;--radius-sm:12px;--radius-xs:8px;
+      --radius:20px;--radius-sm:12px;--radius-xs:8px;--radius-xl:28px;
+      --ease-expo:cubic-bezier(0.16,1,0.3,1);--ease-spring:cubic-bezier(0.34,1.56,0.64,1);
     }
+    html,body{height:100%}
     body{background:var(--bg);color:var(--text);font-family:var(--font-body);overflow-x:hidden;line-height:1.5;-webkit-font-smoothing:antialiased}
     a{text-decoration:none;color:inherit}
 
-    /* ─── THREE CANVAS ─── */
-    #bg-canvas{
-      position:fixed;inset:0;pointer-events:none;z-index:0;display:block;
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+    /* ─── APP SHELL ─── */
+    #app{width:100%;min-height:100vh;position:relative;overflow:hidden}
+    .screen{display:none;width:100%;min-height:100vh;position:absolute;top:0;left:0;transition:all 0.6s var(--ease-expo)}
+    .screen.active{display:block;position:relative;z-index:2}
+    .screen.transitioning{display:block;position:fixed;z-index:999;animation:pageIn 0.7s var(--ease-expo) both}
+    @keyframes pageIn{0%{opacity:0;transform:scale(0.96) translateY(20px);filter:blur(4px)}100%{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}}
+    @keyframes pageOut{0%{opacity:1;transform:scale(1) translateY(0)}100%{opacity:0;transform:scale(1.04) translateY(-20px);filter:blur(4px)}}
+
+    /* ─── AMBIENT ─── */
+    .ambient{
+      position:fixed;inset:0;pointer-events:none;z-index:0;
+      background:radial-gradient(circle at 20% 30%, rgba(255,91,30,0.04) 0%, transparent 50%),
+                 radial-gradient(circle at 80% 70%, rgba(139,92,246,0.03) 0%, transparent 50%);
+    }
+    .ambient-grid{
+      position:fixed;inset:0;pointer-events:none;z-index:0;
+      background-image:radial-gradient(circle at 1px 1px, rgba(0,0,0,0.03) 1px, transparent 0);
+      background-size:32px 32px;
     }
 
-    /* ─── HEADER ─── */
-    header{
-      position:fixed;top:0;left:0;right:0;z-index:100;
-      background:rgba(6,7,10,.45);backdrop-filter:blur(32px) saturate(1.5);
-      border-bottom:1px solid var(--border);
+    /* ─── CONFETTI ─── */
+    .confetti-container{position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden}
+    .confetti-piece{
+      position:absolute;width:8px;height:8px;border-radius:2px;top:-10px;
+      animation:confettiFall linear forwards;
     }
-
-    .header-inner{
-      max-width:1260px;margin:0 auto;padding:0 28px;height:66px;
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
-    }
-
-    .logo{
-      display:flex;align-items:center;gap:12px;flex-shrink:0;
-      font-family:var(--font-display);font-size:20px;font-weight:700;color:#FFF;letter-spacing:-.4px;
-      position:relative;
-    }
-    .logo-badge{
-      width:38px;height:38px;border-radius:50%;
-      background:linear-gradient(135deg,#FF5B1E,#C83C00);display:flex;align-items:center;justify-content:center;
-      border:2px solid rgba(255,255,255,.1);box-shadow:0 4px 20px rgba(255,91,30,.35);
-      overflow:hidden;flex-shrink:0;
-    }
-    .logo-badge img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-
-    .header-tabs{display:flex;align-items:center;gap:2px;list-style:none}
-    .nav-item{
-      position:relative;padding:20px 14px;cursor:pointer;border-radius:var(--radius-xs);
-    }
-    .nav-item>span{
-      font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;
-      display:flex;align-items:center;gap:4px;
-    }
-    .nav-item:hover>span{color:#FFF}
-
-    .mega{
-      position:absolute;top:calc(100% - 2px);left:50%;transform:translateX(-50%) translateY(10px);
-      width:360px;background:rgba(11,14,22,.88);backdrop-filter:blur(32px) saturate(1.6);
-      border:1px solid var(--border);border-radius:var(--radius-sm);
-      padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;
-      box-shadow:0 32px 80px rgba(0,0,0,.8);
-      opacity:0;visibility:hidden;transition:all .3s ease;
-      pointer-events:none;
-    }
-    .nav-item:hover .mega{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);pointer-events:auto}
-    .mega-col h5{font-family:var(--font-display);font-size:10px;font-weight:600;color:var(--orange);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
-    .mega-col a{display:block;font-size:12px;color:var(--muted);padding:4px 0;transition:color .2s}
-    .mega-col a:hover{color:#FFF;transform:translateX(5px)}
-
-    .location{
-      display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
-      background:rgba(255,255,255,.025);padding:7px 12px;border-radius:var(--radius-xs);
-      border:1px solid var(--border);cursor:pointer;white-space:nowrap;
-    }
-    .search-bar{
-      display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
-      background:rgba(255,255,255,.025);padding:7px 12px;border-radius:var(--radius-xs);
-      border:1px solid var(--border);width:180px;
-    }
-
-    .header-right{display:flex;align-items:center;gap:8px}
-    .icon-btn{
-      position:relative;width:38px;height:38px;border-radius:var(--radius-xs);
-      background:rgba(255,255,255,.025);border:1px solid var(--border);
-      display:flex;align-items:center;justify-content:center;color:#FFF;
-    }
-    .badge-dot{
-      position:absolute;top:-4px;right:-4px;background:var(--orange);color:#FFF;
-      font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;
-      display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);
-      box-shadow:0 2px 12px rgba(255,91,30,.5);
-    }
-    .avatar{
-      width:38px;height:38px;border-radius:var(--radius-xs);
-      background:rgba(255,255,255,.025);border:1px solid var(--border);
-      display:flex;align-items:center;justify-content:center;color:#FFF;
-    }
-
-    /* ─── HERO ─── */
-    .hero{
-      padding-top:150px;padding-bottom:40px;text-align:center;position:relative;z-index:2;
-    }
-    .hero-badge{
-      display:inline-flex;align-items:center;gap:8px;
-      background:var(--orange-soft);border:1px solid var(--border-active);
-      border-radius:100px;padding:5px 14px 5px 6px;font-size:11px;font-weight:600;
-      color:var(--orange);margin-bottom:20px;
-    }
-    .hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--orange)}
-    .hero-drivemate{position:relative;display:inline-block;margin-bottom:12px}
-    .hero-drivemate h1{
-      font-family:var(--font-display);font-size:clamp(36px,6vw,60px);font-weight:800;
-      letter-spacing:-2px;line-height:1.06;
-      background:linear-gradient(135deg,#FFF 30%,var(--orange) 100%);
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-    }
-    .hero .sub{
-      font-size:clamp(14px,1.5vw,17px);color:var(--muted);font-weight:500;
-      font-family:var(--font-display);
-    }
-    .hero-actions{
-      display:flex;align-items:center;justify-content:center;gap:14px;margin-top:28px;
-    }
-    .btn-primary{
-      display:inline-flex;align-items:center;gap:8px;
-      background:var(--orange);color:#FFF;font-weight:700;font-size:14px;
-      padding:12px 28px;border-radius:100px;border:none;
-      font-family:var(--font-display);cursor:pointer;
-      box-shadow:0 4px 24px rgba(255,91,30,.3);
-    }
-    .btn-ghost{
-      display:inline-flex;align-items:center;gap:6px;
-      background:transparent;color:var(--muted);font-weight:600;font-size:13px;
-      padding:12px 22px;border-radius:100px;border:1px solid var(--border);
-      font-family:var(--font-display);cursor:pointer;
-    }
-
-    /* ─── CATEGORY ROW ─── */
-    .cat-row{
-      display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
-      gap:12px;margin:36px 0 50px;position:relative;z-index:2;
-    }
-    .cat-item{
-      background:var(--card);border:1px solid var(--border);
-      border-radius:var(--radius-sm);padding:16px 8px;text-align:center;
-      cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;
-      backdrop-filter:blur(4px);
-    }
-    .cat-icon{
-      width:40px;height:40px;border-radius:var(--radius-xs);
-      background:var(--orange-soft);display:flex;align-items:center;justify-content:center;
-    }
-    .cat-item span{font-size:11px;font-weight:600;color:var(--text);line-height:1.3}
-
-    /* ─── SECTIONS ─── */
-    .wrap{max-width:1260px;margin:0 auto;padding:0 28px;position:relative;z-index:2}
-    .section{margin-bottom:60px;position:relative;z-index:2}
-    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-    .section-head h2{font-family:var(--font-display);font-size:clamp(18px,2.5vw,24px);font-weight:700;letter-spacing:-.3px}
-    .see-all{font-size:12px;font-weight:600;color:var(--orange);cursor:pointer}
-
-    /* ─── BANNERS ─── */
-    .banner-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-    .banner{
-      position:relative;overflow:hidden;padding:24px;border-radius:var(--radius);
-      border:1px solid var(--border);background:var(--card);
-      display:flex;flex-direction:column;justify-content:space-between;min-height:170px;
-      backdrop-filter:blur(4px);cursor:pointer;
-    }
-    .banner .tag{
-      display:inline-block;font-size:9px;font-weight:700;font-family:var(--font-mono);
-      color:var(--orange);background:var(--orange-soft);
-      padding:3px 8px;border-radius:5px;width:fit-content;margin-bottom:10px;
-    }
-    .banner h3{font-family:var(--font-display);font-size:15px;font-weight:700;max-width:85%;line-height:1.25}
-    .banner .cta{font-size:12px;font-weight:700;color:var(--orange);margin-top:14px;display:flex;align-items:center;gap:4px}
-    .banner-icon{position:absolute;right:-6px;bottom:-6px;opacity:.08;z-index:1}
-
-    /* ─── SERVICE CARDS ─── */
-    .service-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-    .svc-card{
-      background:var(--card);border:1px solid var(--border);
-      border-radius:var(--radius-sm);padding:18px;display:flex;gap:14px;
-      position:relative;cursor:pointer;backdrop-filter:blur(4px);
-    }
-    .svc-thumb{
-      width:56px;height:56px;border-radius:var(--radius-xs);
-      background:rgba(255,255,255,.015);border:1px solid var(--border);
-      display:flex;align-items:center;justify-content:center;flex-shrink:0;
-      position:relative;
-    }
-    .ev-badge{
-      position:absolute;top:-5px;right:-5px;background:var(--green);
-      color:#000;font-size:8px;font-weight:800;padding:2px 4px;border-radius:3px;
-      font-family:var(--font-mono);
-    }
-    .svc-body{display:flex;flex-direction:column;justify-content:center}
-    .svc-name{font-family:var(--font-display);font-size:13px;font-weight:700;margin-bottom:3px}
-    .svc-rating{font-size:11px;color:var(--muted);margin-bottom:4px}
-    .svc-rating b{color:#FFB238}
-    .svc-price{font-family:var(--font-mono);font-size:15px;font-weight:700;color:#FFF}
-    .svc-price .strike{text-decoration:line-through;color:var(--muted);font-size:12px;margin-left:5px;font-weight:400}
-    .svc-add-btn{
-      position:absolute;top:14px;right:14px;width:30px;height:30px;
-      border-radius:50%;border:1px solid var(--border);
-      background:rgba(255,255,255,.02);color:#FFF;display:flex;
-      align-items:center;justify-content:center;cursor:pointer;
-      font-size:15px;font-family:var(--font-mono);z-index:2;
-      transition:background .3s;
-    }
-    .svc-add-btn:hover{background:var(--orange)!important;border-color:var(--orange)!important}
-    .svc-add-btn.added{background:var(--green);border-color:var(--green)}
-
-    /* ─── TRUST STRIP ─── */
-    .trust-strip{
-      background:var(--surface);border:1px solid var(--border);
-      border-radius:var(--radius);padding:30px 24px;margin:50px 0 70px;
-      display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
-      gap:20px;text-align:center;backdrop-filter:blur(4px);
-    }
-    .trust-item .num{
-      font-family:var(--font-mono);font-size:30px;font-weight:700;
-      background:linear-gradient(135deg,var(--orange),var(--purple));
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-      margin-bottom:3px;
-    }
-    .trust-item .lbl{font-size:12px;color:var(--muted);line-height:1.4}
-
-    /* ─── CART SIDEBAR ─── */
-    .cart-overlay{
-      position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);
-      z-index:500;opacity:0;visibility:hidden;transition:all .4s;
-    }
-    .cart-overlay.open{opacity:1;visibility:visible}
-    .cart-sidebar{
-      position:fixed;top:0;right:0;width:400px;max-width:90vw;height:100vh;
-      background:var(--surface);border-left:1px solid var(--border);
-      z-index:501;transform:translateX(100%);transition:transform .5s ease;
-      display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(0,0,0,.7);
-    }
-    .cart-sidebar.open{transform:translateX(0)}
-    .cart-header{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:22px 24px;border-bottom:1px solid var(--border);
-    }
-    .cart-header h3{font-family:var(--font-display);font-size:18px;font-weight:700}
-    .cart-close{
-      width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
-      background:transparent;color:#FFF;display:flex;align-items:center;
-      justify-content:center;cursor:pointer;font-size:16px;
-    }
-    .cart-items{flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px}
-    .cart-items::-webkit-scrollbar{width:3px}
-    .cart-items::-webkit-scrollbar-thumb{background:rgba(255,255,255,.06);border-radius:4px}
-    .cart-empty{text-align:center;margin-top:60px;color:var(--muted)}
-    .cart-empty i{opacity:.25;margin-bottom:14px}
-    .cart-empty p{font-size:13px}
-    .cart-item{
-      display:flex;align-items:center;gap:12px;padding:12px 14px;
-      background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xs);
-    }
-    .cart-item-info{flex:1}
-    .cart-item-name{font-size:12px;font-weight:600;margin-bottom:2px}
-    .cart-item-price{font-size:13px;font-family:var(--font-mono);color:var(--orange);font-weight:600}
-    .cart-item-qty{display:flex;align-items:center;gap:6px;margin-top:3px}
-    .cart-item-qty button{
-      width:24px;height:24px;border-radius:5px;border:1px solid var(--border);
-      background:rgba(255,255,255,.02);color:#FFF;display:flex;
-      align-items:center;justify-content:center;cursor:pointer;font-size:13px;
-    }
-    .cart-item-qty span{font-size:12px;font-weight:600;min-width:18px;text-align:center}
-    .cart-item-remove{
-      width:26px;height:26px;border-radius:5px;border:none;
-      background:transparent;color:var(--muted);cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-    }
-    .cart-item-remove:hover{color:#EF4444}
-    .cart-footer{padding:16px 24px 24px;border-top:1px solid var(--border)}
-    .cart-total{
-      display:flex;justify-content:space-between;align-items:center;
-      font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:14px;
-    }
-    .cart-total span:last-child{color:var(--orange)}
-    .cart-checkout{
-      width:100%;padding:14px;border-radius:100px;border:none;
-      background:var(--orange);color:#FFF;font-size:14px;font-weight:700;
-      font-family:var(--font-display);cursor:pointer;
-      display:flex;align-items:center;justify-content:center;gap:8px;
-    }
+    @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
 
     /* ─── TOAST ─── */
-    .toast-container{
-      position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px;
-    }
+    .toast-container{position:fixed;top:24px;left:50%;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
     .toast{
-      padding:12px 20px;border-radius:var(--radius-xs);
-      background:rgba(11,14,22,.92);backdrop-filter:blur(16px);
-      border:1px solid var(--border);color:#FFF;font-size:12px;font-weight:600;
-      box-shadow:0 8px 32px rgba(0,0,0,.6);display:flex;align-items:center;gap:10px;
+      transform:translateX(-50%) translateY(-20px);padding:14px 28px;border-radius:var(--radius-sm);
+      background:rgba(255,255,255,0.92);backdrop-filter:blur(20px);
+      border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:600;
+      box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:12px;
+      opacity:0;transition:all 0.5s var(--ease-expo);pointer-events:auto;min-width:300px;justify-content:center;
     }
-    .toast-icon{color:var(--green);flex-shrink:0}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    .toast.success .toast-icon{color:var(--green)}
+    .toast.error .toast-icon{color:#EF4444}
+    .toast.info .toast-icon{color:var(--orange)}
 
-    /* ─── FOOTER ─── */
-    footer{
-      background:rgba(4,5,7,.7);border-top:1px solid var(--border);
-      padding:56px 0 24px;position:relative;z-index:2;
+    /* ─── BUTTONS ─── */
+    .btn-primary{
+      display:inline-flex;align-items:center;justify-content:center;gap:10px;
+      background:var(--orange);color:#FFF;font-weight:700;font-size:15px;
+      padding:16px 32px;border-radius:100px;border:none;
+      font-family:var(--font-display);cursor:pointer;
+      transition:all 0.35s var(--ease-expo);position:relative;overflow:hidden;
+      box-shadow:0 4px 24px rgba(255,91,30,0.25);
     }
-    .footer-grid{
-      display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-      gap:36px;margin-bottom:36px;
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 40px rgba(255,91,30,0.35)}
+    .btn-primary:active{transform:translateY(0) scale(0.97)}
+    .btn-primary .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.3);transform:scale(0);animation:ripple 0.6s linear}
+    @keyframes ripple{to{transform:scale(4);opacity:0}}
+
+    .btn-secondary{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;
+      background:var(--surface);color:var(--text);font-weight:600;font-size:14px;
+      padding:14px 28px;border-radius:100px;border:1.5px solid var(--border);
+      font-family:var(--font-display);cursor:pointer;transition:all 0.3s;
     }
-    .footer-grid h4{font-family:var(--font-display);font-size:13px;font-weight:700;margin-bottom:16px;color:#FFF}
-    .footer-grid a{display:block;font-size:12px;color:var(--muted);margin-bottom:8px;transition:color .2s}
-    .footer-grid a:hover{color:#FFF}
-    .social-icons{display:flex;gap:8px;margin-bottom:16px}
-    .social-icons a{
-      width:34px;height:34px;border-radius:var(--radius-xs);
-      background:rgba(255,255,255,.02);border:1px solid var(--border);
-      display:flex;align-items:center;justify-content:center;color:#FFF;
+    .btn-secondary:hover{background:var(--card-hover);border-color:var(--orange);color:var(--orange)}
+
+    .btn-ghost{
+      display:inline-flex;align-items:center;gap:6px;
+      background:transparent;color:var(--text-secondary);font-weight:600;font-size:13px;
+      padding:12px 20px;border-radius:100px;border:none;
+      font-family:var(--font-display);cursor:pointer;transition:all 0.3s;
     }
-    .social-icons a:hover{background:var(--orange-soft);border-color:var(--border-active)}
-    .store-badge{
-      display:inline-flex;align-items:center;gap:8px;
-      background:rgba(255,255,255,.02);border:1px solid var(--border);
-      border-radius:var(--radius-xs);padding:7px 14px;margin-bottom:8px;
-      cursor:pointer;min-width:130px;
+    .btn-ghost:hover{color:var(--orange);background:var(--orange-soft)}
+
+    /* ─── CARDS ─── */
+    .glass-card{
+      background:var(--card);backdrop-filter:blur(20px);
+      border:1px solid var(--border);border-radius:var(--radius);
+      box-shadow:var(--shadow-sm);transition:all 0.4s var(--ease-expo);
     }
-    .store-badge:hover{background:rgba(255,255,255,.06)}
-    .store-badge .txt{font-size:11px;line-height:1.2}
-    .store-badge .small{font-size:8px;color:var(--muted)}
-    .store-badge .big{font-weight:700;color:#FFF}
-    .footer-bottom{
-      border-top:1px solid var(--border);padding-top:20px;
-      text-align:center;font-size:11px;color:var(--muted);font-family:var(--font-mono);
+    .glass-card:hover{box-shadow:var(--shadow-md);border-color:rgba(0,0,0,0.08)}
+
+    /* ─── INPUTS ─── */
+    .input-group{margin-bottom:18px}
+    .input-group label{display:block;font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;letter-spacing:0.2px}
+    .input-group label .req{color:var(--orange)}
+    .input-wrap{
+      display:flex;align-items:center;
+      background:var(--surface);border:1.5px solid var(--border);
+      border-radius:var(--radius-xs);transition:all 0.3s;position:relative;
+    }
+    .input-wrap:focus-within{border-color:var(--orange);box-shadow:0 0 0 4px var(--orange-soft);background:#FFF}
+    .input-wrap .icon{position:absolute;left:14px;color:var(--muted);display:flex}
+    .input-wrap input,.input-wrap select,.input-wrap textarea{
+      width:100%;padding:14px 16px 14px 46px;background:transparent;border:none;outline:none;
+      color:var(--text);font-size:14px;font-family:var(--font-body);border-radius:var(--radius-xs);
+    }
+    .input-wrap textarea{padding:14px 16px;min-height:80px;resize:vertical}
+    .input-wrap select{appearance:none;cursor:pointer}
+    .input-wrap .select-arrow{position:absolute;right:14px;color:var(--muted);pointer-events:none}
+
+    /* ─── LOGIN SCREEN ─── */
+    #loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;background:var(--bg)}
+    #loginScreen .login-wrap{width:100%;max-width:420px;z-index:2}
+    .login-header{text-align:center;margin-bottom:32px}
+    .login-logo-img{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#FF5B1E,#C83C00);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;box-shadow:0 8px 32px rgba(255,91,30,0.3);overflow:hidden}
+    .login-logo-img img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+    .login-logo-img .fallback{color:#FFF;font-family:var(--font-display);font-weight:800;font-size:22px}
+    .login-header h1{font-family:var(--font-display);font-size:30px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px}
+    .login-header p{color:var(--text-secondary);font-size:15px;font-weight:500}
+    .login-card{padding:32px 28px;border-radius:var(--radius-xl);background:rgba(255,255,255,0.8);backdrop-filter:blur(24px);border:1px solid var(--border);box-shadow:var(--shadow-lg)}
+    .login-options{display:flex;flex-direction:column;gap:12px}
+    .login-option-btn{
+      display:flex;align-items:center;gap:14px;padding:18px 20px;border-radius:var(--radius-sm);
+      background:var(--surface);border:1.5px solid var(--border);cursor:pointer;
+      transition:all 0.35s var(--ease-expo);font-family:var(--font-display);
+    }
+    .login-option-btn:hover{border-color:var(--orange);background:var(--orange-light);transform:translateX(4px)}
+    .login-option-btn .opt-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .login-option-btn .opt-icon.customer{background:rgba(255,91,30,0.1);color:var(--orange)}
+    .login-option-btn .opt-icon.employee{background:rgba(139,92,246,0.1);color:var(--purple)}
+    .login-option-btn .opt-text{flex:1}
+    .login-option-btn .opt-text .title{font-weight:700;font-size:15px;color:var(--text)}
+    .login-option-btn .opt-text .sub{font-size:12px;color:var(--muted);font-weight:400;font-family:var(--font-body)}
+    .login-option-btn .opt-arrow{color:var(--muted);transition:all 0.3s}
+    .login-option-btn:hover .opt-arrow{color:var(--orange);transform:translateX(4px)}
+    .login-divider{display:flex;align-items:center;gap:16px;margin:20px 0;color:var(--muted);font-size:12px;font-weight:500}
+    .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    /* ─── AUTH FORMS ─── */
+    .auth-form{display:none;animation:fadeSlideUp 0.5s var(--ease-expo) both}
+    .auth-form.active{display:block}
+    @keyframes fadeSlideUp{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
+    .auth-form .back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);cursor:pointer;margin-bottom:18px;font-weight:500;transition:color 0.3s}
+    .auth-form .back-btn:hover{color:var(--orange)}
+    .auth-form h2{font-family:var(--font-display);font-size:22px;font-weight:700;margin-bottom:4px}
+    .auth-form .sub{color:var(--text-secondary);font-size:13px;margin-bottom:22px}
+
+    /* ─── DASHBOARD ─── */
+    .dash-header{
+      background:var(--bg);padding:24px 28px 16px;display:flex;align-items:center;justify-content:space-between;
+      border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;
+    }
+    .dash-header .greeting{font-family:var(--font-display)}
+    .dash-header .greeting .hi{font-size:14px;color:var(--text-secondary);font-weight:500}
+    .dash-header .greeting .name{font-size:22px;font-weight:800;letter-spacing:-0.3px}
+    .dash-header .dash-actions{display:flex;gap:8px;align-items:center}
+    .dash-avatar{width:40px;height:40px;border-radius:50%;background:var(--orange-soft);display:flex;align-items:center;justify-content:center;color:var(--orange);font-weight:700;font-size:16px;font-family:var(--font-display);cursor:pointer}
+
+    .dash-content{max-width:800px;margin:0 auto;padding:24px 28px 40px}
+    .book-hero{
+      background:linear-gradient(135deg,#FF5B1E,#E0480F);border-radius:var(--radius-xl);
+      padding:36px 32px;color:#FFF;margin-bottom:28px;position:relative;overflow:hidden;
+    }
+    .book-hero::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(255,255,255,0.1),transparent 60%);pointer-events:none}
+    .book-hero h2{font-family:var(--font-display);font-size:28px;font-weight:800;letter-spacing:-0.5px;position:relative;z-index:2}
+    .book-hero p{font-size:14px;opacity:0.85;margin-bottom:20px;position:relative;z-index:2}
+    .book-hero .btn-book{
+      background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.25);
+      padding:16px 36px;border-radius:100px;color:#FFF;font-weight:700;font-size:16px;
+      font-family:var(--font-display);cursor:pointer;display:inline-flex;align-items:center;gap:12px;
+      transition:all 0.3s;position:relative;z-index:2;
+    }
+    .book-hero .btn-book:hover{background:rgba(255,255,255,0.3);transform:translateY(-2px)}
+
+    .section-title{font-family:var(--font-display);font-size:18px;font-weight:700;margin-bottom:16px;letter-spacing:-0.3px}
+
+    /* ─── BOOKING MODAL ─── */
+    .modal-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(12px);
+      z-index:100;opacity:0;visibility:hidden;transition:all 0.5s;
+    }
+    .modal-overlay.open{opacity:1;visibility:visible}
+    .modal{
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.92);
+      width:92%;max-width:560px;max-height:90vh;overflow-y:auto;
+      background:var(--bg);border-radius:var(--radius-xl);
+      box-shadow:var(--shadow-xl);z-index:101;padding:32px;
+      opacity:0;visibility:hidden;transition:all 0.5s var(--ease-expo);
+    }
+    .modal.open{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+    .modal-close{
+      position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;
+      background:var(--surface);border:1px solid var(--border);display:flex;
+      align-items:center;justify-content:center;cursor:pointer;color:var(--text-secondary);
+      transition:all 0.3s;
+    }
+    .modal-close:hover{background:var(--orange);color:#FFF;border-color:var(--orange)}
+    .modal h2{font-family:var(--font-display);font-size:22px;font-weight:700;margin-bottom:4px}
+    .modal .step-indicator{display:flex;gap:6px;margin-bottom:24px}
+    .modal .step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all 0.4s var(--ease-spring)}
+    .modal .step-dot.active{background:var(--orange);transform:scale(1.3)}
+    .modal .step-dot.done{background:var(--green)}
+
+    .booking-step{display:none;animation:fadeSlideUp 0.5s var(--ease-expo) both}
+    .booking-step.active{display:block}
+
+    /* ─── REQUEST CARDS ─── */
+    .request-card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:20px;margin-bottom:14px;transition:all 0.35s var(--ease-expo);
+      cursor:pointer;position:relative;overflow:hidden;
+    }
+    .request-card:hover{border-color:var(--orange);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+    .request-card .badge{
+      display:inline-block;font-size:10px;font-weight:700;font-family:var(--font-mono);
+      padding:4px 10px;border-radius:100px;margin-bottom:10px;
+    }
+    .request-card .badge.urgent{background:rgba(239,68,68,0.1);color:#EF4444}
+    .request-card .badge.normal{background:var(--orange-soft);color:var(--orange)}
+    .request-card .req-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .request-card .req-label{font-size:12px;color:var(--text-secondary)}
+    .request-card .req-value{font-size:14px;font-weight:600}
+    .request-card .req-actions{display:flex;gap:10px;margin-top:14px}
+    .request-card .req-actions button{flex:1;padding:10px;border-radius:100px;font-weight:600;font-size:13px;cursor:pointer;font-family:var(--font-display);transition:all 0.3s}
+
+    /* ─── LIVE TRACKING ─── */
+    .tracking-card{
+      background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+      padding:24px;margin-bottom:20px;position:relative;
+    }
+    .tracking-header{display:flex;align-items:center;gap:16px;margin-bottom:16px}
+    .tracking-avatar{width:52px;height:52px;border-radius:50%;background:var(--orange-soft);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--orange);font-family:var(--font-display)}
+    .tracking-info{flex:1}
+    .tracking-info .name{font-weight:700;font-size:16px}
+    .tracking-info .detail{font-size:13px;color:var(--text-secondary)}
+    .tracking-status{
+      display:flex;align-items:center;gap:14px;padding:14px 0;
+      border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:12px 0;
+    }
+    .tracking-status .status-dot{
+      width:12px;height:12px;border-radius:50%;background:var(--orange);
+      animation:pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}
+    .tracking-status .status-text{font-weight:600;font-size:15px}
+    .tracking-timeline{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .tracking-timeline .tl-item{display:flex;align-items:center;gap:12px;font-size:13px;color:var(--text-secondary)}
+    .tracking-timeline .tl-item .tl-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0}
+    .tracking-timeline .tl-item.active .tl-dot{background:var(--orange);box-shadow:0 0 0 4px var(--orange-soft)}
+    .tracking-timeline .tl-item.active{color:var(--text);font-weight:600}
+    .tracking-timeline .tl-item.done .tl-dot{background:var(--green)}
+    .tracking-timeline .tl-item.done{color:var(--green)}
+
+    /* ─── ADMIN ─── */
+    .admin-sidebar{
+      position:fixed;left:0;top:0;bottom:0;width:240px;background:var(--bg);
+      border-right:1px solid var(--border);padding:24px;z-index:10;overflow-y:auto;
+    }
+    .admin-main{margin-left:240px;padding:24px 32px;min-height:100vh}
+    .admin-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+    .stat-card{padding:20px;border-radius:var(--radius);background:var(--card);border:1px solid var(--border)}
+    .stat-card .num{font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--orange)}
+    .stat-card .lbl{font-size:13px;color:var(--text-secondary);margin-top:4px}
+
+    .admin-table{width:100%;border-collapse:collapse;font-size:14px}
+    .admin-table th{text-align:left;padding:12px 16px;color:var(--text-secondary);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid var(--border)}
+    .admin-table td{padding:12px 16px;border-bottom:1px solid var(--border)}
+    .admin-table tr:hover td{background:var(--orange-light)}
+    .admin-badge{padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;display:inline-block}
+    .admin-badge.active{background:rgba(16,185,129,0.1);color:var(--green)}
+    .admin-badge.pending{background:rgba(255,91,30,0.1);color:var(--orange)}
+    .admin-badge.suspended{background:rgba(239,68,68,0.1);color:#EF4444}
+
+    /* ─── RESPONSIVE ─── */
+    @media(max-width:768px){
+      .login-header h1{font-size:26px}
+      .login-card{padding:24px 20px}
+      .book-hero{padding:28px 24px}
+      .book-hero h2{font-size:22px}
+      .dash-content{padding:16px}
+      .modal{padding:24px 20px;width:96%}
+      .admin-sidebar{display:none}
+      .admin-main{margin-left:0;padding:16px}
+      .admin-stats{grid-template-columns:repeat(2,1fr)}
     }
 
-    @media(max-width:1024px){.header-tabs,.search-bar,.location{display:none}}
-    @media(max-width:600px){
-      .header-inner{padding:0 18px;height:60px}
-      .hero{padding-top:110px}
-      .hero-drivemate h1{font-size:30px}
-      .cat-row{grid-template-columns:repeat(4,1fr);gap:8px}
-      .cat-item{padding:12px 4px}
-      .cat-item span{font-size:9px}
-      .banner-row,.service-row{grid-template-columns:1fr}
-      .trust-strip{grid-template-columns:repeat(3,1fr);padding:20px 14px}
-      .trust-item .num{font-size:24px}
-      .cart-sidebar{width:100vw;max-width:100vw}
-      .section-head h2{font-size:18px}
-      .wrap{padding:0 18px}
-      .hero-actions{flex-direction:column;gap:10px}
-      .btn-primary,.btn-ghost{width:100%;justify-content:center}
-    }
-    @media(max-width:400px){.cat-row{grid-template-columns:repeat(2,1fr)}}
+    /* ─── UTILITY ─── */
+    .text-center{text-align:center}
+    .mt-8{margin-top:8px}
+    .mt-16{margin-top:16px}
+    .mt-24{margin-top:24px}
+    .flex{display:flex}
+    .flex-center{align-items:center;justify-content:center}
+    .gap-8{gap:8px}
+    .gap-12{gap:12px}
+    .gap-16{gap:16px}
+    .hidden{display:none!important}
   </style>
 </head>
 <body>
 
-  <!-- Three.js Background Canvas -->
-  <canvas id="bg-canvas"></canvas>
+<div id="app">
+  <div class="ambient"></div>
+  <div class="ambient-grid"></div>
 
-  <!-- ─── HEADER ─── -->
-  <header>
-    <div class="header-inner">
-      <a class="logo" href="#">
-        <span class="logo-badge">
-          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23FF5B1E'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='40' font-weight='800' font-family='sans-serif' fill='%23FFF'%3EDM%3C/text%3E%3C/svg%3E" alt="DriveMate">
-        </span>
-        DriveMate
-      </a>
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
 
-      <nav class="header-tabs">
-        <div class="nav-item">
-          <span>2 Wheelers</span>
-          <div class="mega">
-            <div class="mega-col"><h5>Scooty</h5><a href="#">Honda</a><a href="#">TVS</a><a href="#">Suzuki</a><a href="#">Hero</a><a href="#">Vespa</a></div>
-            <div class="mega-col"><h5>Bike</h5><a href="#">Royal Enfield</a><a href="#">Bajaj</a><a href="#">Yamaha</a><a href="#">KTM</a><a href="#">Hero MotoCorp</a></div>
+  <!-- ─── LOGIN SCREEN ─── -->
+  <div class="screen active" id="loginScreen">
+    <div class="login-wrap">
+      <div class="login-header">
+        <div class="login-logo-img">
+          <img src="assets/logo.png" alt="DriveMate" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <span class="fallback" style="display:none">DM</span>
+        </div>
+        <h1>Welcome to DriveMate</h1>
+        <p>Your roadside partner, always nearby.</p>
+      </div>
+
+      <div class="login-card">
+        <!-- Main Options -->
+        <div class="login-options" id="loginOptions">
+          <div class="login-option-btn" onclick="showAuthForm('customer')">
+            <div class="opt-icon customer"><i data-lucide="user" style="width:22px;height:22px"></i></div>
+            <div class="opt-text">
+              <div class="title">Customer Login</div>
+              <div class="sub">Request roadside assistance in seconds</div>
+            </div>
+            <div class="opt-arrow"><i data-lucide="chevron-right" style="width:18px;height:18px"></i></div>
+          </div>
+          <div class="login-option-btn" onclick="showAuthForm('employee')">
+            <div class="opt-icon employee"><i data-lucide="briefcase" style="width:22px;height:22px"></i></div>
+            <div class="opt-text">
+              <div class="title">Mechanic Login</div>
+              <div class="sub">Join as a roadside professional</div>
+            </div>
+            <div class="opt-arrow"><i data-lucide="chevron-right" style="width:18px;height:18px"></i></div>
+          </div>
+          <div class="login-divider">Secure &amp; trusted</div>
+          <div style="text-align:center;font-size:12px;color:var(--muted)">
+            <i data-lucide="shield-check" style="width:14px;height:14px;display:inline;vertical-align:middle"></i>
+            End-to-end encrypted · 100% Safe
           </div>
         </div>
-        <div class="nav-item">
-          <span>4 Wheelers</span>
-          <div class="mega">
-            <div class="mega-col"><h5>Hatchback &amp; Sedan</h5><a href="#">Maruti Suzuki</a><a href="#">Hyundai</a><a href="#">Tata Motors</a><a href="#">Honda</a><a href="#">Toyota</a></div>
-            <div class="mega-col"><h5>SUV &amp; Premium</h5><a href="#">Mahindra</a><a href="#">Kia</a><a href="#">Skoda</a><a href="#">MG</a><a href="#">Renault</a></div>
+
+        <!-- Customer Auth Form -->
+        <div class="auth-form" id="customerAuth">
+          <div class="back-btn" onclick="showLoginOptions()"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</div>
+          <h2>Customer Login</h2>
+          <div class="sub">Quickly sign in to request help.</div>
+          <div class="login-options" style="gap:10px">
+            <div class="login-option-btn" style="justify-content:center;padding:14px" onclick="handleGoogleSignIn('customer')">
+              <i data-lucide="chrome" style="width:20px;height:20px;color:var(--orange)"></i>
+              <span style="font-weight:600;font-size:14px">Continue with Google</span>
+            </div>
+            <div class="login-option-btn" style="justify-content:center;padding:14px" onclick="showEmailForm('customer')">
+              <i data-lucide="mail" style="width:20px;height:20px;color:var(--purple)"></i>
+              <span style="font-weight:600;font-size:14px">Continue with Email</span>
+            </div>
+          </div>
+          <div class="mt-16 text-center" style="font-size:12px;color:var(--muted)">
+            By continuing, you agree to our <a href="#" style="color:var(--orange);font-weight:600">Terms</a> &amp; <a href="#" style="color:var(--orange);font-weight:600">Privacy Policy</a>
           </div>
         </div>
-        <div class="nav-item"><span>CNG</span></div>
-        <div class="nav-item"><span>Electric</span></div>
-        <div class="nav-item"><span>Breakdown</span></div>
-        <div class="nav-item"><span>Home Service</span></div>
-      </nav>
 
-      <div class="location">
-        <i data-lucide="map-pin" style="width:13px;height:13px;color:var(--orange)"></i>
-        <b>Delhi NCR</b>
-        <i data-lucide="chevron-down" style="width:11px;height:11px;color:var(--muted)"></i>
-      </div>
+        <!-- Customer Email Form -->
+        <div class="auth-form" id="customerEmail">
+          <div class="back-btn" onclick="showAuthForm('customer')"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</div>
+          <h2>Sign in with Email</h2>
+          <div class="sub">Enter your details to get started.</div>
+          <form onsubmit="handleCustomerSignin(event)">
+            <div class="input-group"><label>Full Name <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="user" style="width:16px;height:16px"></i></span><input type="text" id="custName" placeholder="Rahul Sharma" required></div></div>
+            <div class="input-group"><label>Mobile <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="phone" style="width:16px;height:16px"></i></span><input type="tel" id="custMobile" placeholder="+91 98765 43210" required></div></div>
+            <div class="input-group"><label>Email <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="mail" style="width:16px;height:16px"></i></span><input type="email" id="custEmail" placeholder="rahul@example.com" required></div></div>
+            <button type="submit" class="btn-primary" style="width:100%;margin-top:8px">Continue to Dashboard</button>
+          </form>
+        </div>
 
-      <div class="search-bar">
-        <i data-lucide="search" style="width:13px;height:13px;color:var(--muted)"></i>
-        <span>"brake pad"</span>
+        <!-- Employee Auth Form -->
+        <div class="auth-form" id="employeeAuth">
+          <div class="back-btn" onclick="showLoginOptions()"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</div>
+          <h2>Mechanic Registration</h2>
+          <div class="sub">Join our network of roadside professionals.</div>
+          <form onsubmit="handleEmployeeSignup(event)" style="max-height:400px;overflow-y:auto;padding-right:4px">
+            <div class="input-group"><label>Full Name <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="user" style="width:16px;height:16px"></i></span><input type="text" id="empName" placeholder="Vikram Singh" required></div></div>
+            <div class="input-group"><label>Profile Photo</label>
+              <div class="input-wrap" style="padding:10px 16px"><input type="file" accept="image/*" style="padding:0;font-size:13px"></div></div>
+            <div class="input-group"><label>Mobile <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="phone" style="width:16px;height:16px"></i></span><input type="tel" id="empMobile" placeholder="+91 98765 43210" required></div></div>
+            <div class="input-group"><label>Email <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="mail" style="width:16px;height:16px"></i></span><input type="email" id="empEmail" placeholder="vikram@drivemate.in" required></div></div>
+            <div class="input-group"><label>Residential Address <span class="req">*</span></label>
+              <div class="input-wrap"><textarea id="empAddress" placeholder="Street, city, pincode..." required style="padding-left:16px"></textarea></div></div>
+            <div class="input-group"><label>Aadhaar Number (optional)</label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="credit-card" style="width:16px;height:16px"></i></span><input type="text" id="empAadhaar" placeholder="XXXX XXXX XXXX"></div></div>
+            <div class="input-group"><label>Years of Experience <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="clock" style="width:16px;height:16px"></i></span><input type="number" id="empExp" placeholder="e.g. 5" min="0" required></div></div>
+            <div class="input-group"><label>Specialization <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="wrench" style="width:16px;height:16px"></i></span>
+                <select id="empSpecialization" required><option value="" disabled selected>Select specialization</option>
+                  <option>Bike Mechanic</option><option>Car Mechanic</option><option>Auto Mechanic</option>
+                  <option>Truck Mechanic</option><option>EV Specialist</option><option>General Mechanic</option><option>Towing</option>
+                </select>
+                <span class="select-arrow"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></span></div></div>
+            <div class="input-group"><label>Password <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="lock" style="width:16px;height:16px"></i></span><input type="password" id="empPass" placeholder="Min. 8 characters" required minlength="8"></div></div>
+            <div class="input-group"><label>Confirm Password <span class="req">*</span></label>
+              <div class="input-wrap"><span class="icon"><i data-lucide="lock" style="width:16px;height:16px"></i></span><input type="password" id="empPassConfirm" placeholder="Re-enter password" required></div></div>
+            <div class="input-group" style="display:flex;align-items:flex-start;gap:12px;margin-top:4px">
+              <input type="checkbox" id="empTerms" style="width:18px;height:18px;margin-top:3px;accent-color:var(--orange)" required>
+              <label for="empTerms" style="font-size:12px;color:var(--text-secondary);cursor:pointer;margin:0">I accept the <a href="#" style="color:var(--orange);font-weight:600">Terms &amp; Conditions</a> and <a href="#" style="color:var(--orange);font-weight:600">Privacy Policy</a></label>
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%;margin-top:12px">Register as Mechanic</button>
+          </form>
+        </div>
       </div>
-
-      <div class="header-right">
-        <button class="icon-btn" id="cartToggle" aria-label="Open cart">
-          <i data-lucide="shopping-bag" style="width:17px;height:17px"></i>
-          <span class="badge-dot" id="cartBadge">0</span>
-        </button>
-        <a class="avatar" href="#" aria-label="Account">
-          <i data-lucide="user" style="width:17px;height:17px"></i>
-        </a>
-      </div>
-    </div>
-  </header>
-
-  <!-- ─── CART SIDEBAR ─── -->
-  <div class="cart-overlay" id="cartOverlay"></div>
-  <div class="cart-sidebar" id="cartSidebar">
-    <div class="cart-header">
-      <h3>Your Service Cart</h3>
-      <button class="cart-close" id="cartClose" aria-label="Close cart">&times;</button>
-    </div>
-    <div class="cart-items" id="cartItems">
-      <div class="cart-empty">
-        <i data-lucide="shopping-bag" style="width:44px;height:44px;color:var(--muted)"></i>
-        <p>Nothing added yet.</p>
-      </div>
-    </div>
-    <div class="cart-footer" id="cartFooter" style="display:none">
-      <div class="cart-total">
-        <span>Total</span>
-        <span id="cartTotal">₹0</span>
-      </div>
-      <button class="cart-checkout">
-        <i data-lucide="zap" style="width:15px;height:15px"></i>
-        Book Services
-      </button>
     </div>
   </div>
 
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- ─── MAIN ─── -->
-  <main>
-    <div class="wrap">
-
-      <!-- HERO -->
-      <section class="hero">
-        <div class="hero-badge">
-          <span class="hero-badge-dot"></span>
-          #1 roadside partner — rated 4.8 ★
-        </div>
-        <div class="hero-drivemate">
-          <h1>DriveMate</h1>
-        </div>
-        <div class="sub">Vehicle repair at your doorstep. Book a pro in 30s.</div>
-        <div class="hero-actions">
-          <button class="btn-primary" onclick="document.querySelector('.section')?.scrollIntoView({behavior:'smooth'})">
-            <i data-lucide="zap" style="width:16px;height:16px"></i>
-            Book a Service
-          </button>
-          <button class="btn-ghost">
-            <i data-lucide="play-circle" style="width:16px;height:16px"></i>
-            See how it works
-          </button>
-        </div>
-      </section>
-
-      <!-- CATEGORIES -->
-      <div class="cat-row">
-        <div class="cat-item"><div class="cat-icon"><i data-lucide="bike" style="color:var(--orange)"></i></div><span>Bike &amp; Scooter</span></div>
-        <div class="cat-item"><div class="cat-icon"><i data-lucide="car" style="color:var(--orange)"></i></div><span>Car Service</span></div>
-        <div class="cat-item"><div class="cat-icon"><i data-lucide="zap" style="color:var(--orange)"></i></div><span>EV Battery</span></div>
-        <div class="cat-item"><div class="cat-icon"><i data-lucide="shield-check" style="color:var(--orange)"></i></div><span>Denting</span></div>
-        <div class="cat-item"><div class="cat-icon"><i data-lucide="sparkles" style="color:var(--orange)"></i></div><span>Wash &amp; Detail</span></div>
-        <div class="cat-item"><div class="cat-icon"><i data-lucide="disc" style="color:var(--orange)"></i></div><span>Tyres</span></div>
-        <div class="cat-item"><div class="cat-icon"><i data-lucide="life-buoy" style="color:var(--orange)"></i></div><span>Roadside Assist</span></div>
-        <div class="cat-item"><div class="cat-icon"><i data-lucide="wrench" style="color:var(--orange)"></i></div><span>Spare Parts</span></div>
+  <!-- ─── CUSTOMER DASHBOARD ─── -->
+  <div class="screen" id="customerDash">
+    <div class="dash-header">
+      <div class="greeting">
+        <div class="hi" id="custGreeting">Good Morning,</div>
+        <div class="name" id="custDisplayName">Rahul</div>
       </div>
-
-      <!-- SPOTLIGHT -->
-      <div class="section">
-        <div class="section-head"><h2>🔥 In the spotlight</h2></div>
-        <div class="banner-row">
-          <div class="banner">
-            <span class="tag">EV SPECIAL</span>
-            <h3>Free battery health check on every EV service</h3>
-            <span class="cta">Book now →</span>
-            <i data-lucide="zap" class="banner-icon" style="width:72px;height:72px"></i>
-          </div>
-          <div class="banner">
-            <span class="tag">MONSOON CARE</span>
-            <h3>20% off brake &amp; clutch inspection</h3>
-            <span class="cta">Book now →</span>
-            <i data-lucide="droplets" class="banner-icon" style="width:72px;height:72px"></i>
-          </div>
-          <div class="banner">
-            <span class="tag">NEW</span>
-            <h3>Doorstep tyre replacement, all brands</h3>
-            <span class="cta">Book now →</span>
-            <i data-lucide="disc" class="banner-icon" style="width:72px;height:72px"></i>
-          </div>
-          <div class="banner">
-            <span class="tag">SUBSCRIPTION</span>
-            <h3>DriveMate Care Plan — 3 services a year</h3>
-            <span class="cta">Explore →</span>
-            <i data-lucide="award" class="banner-icon" style="width:72px;height:72px"></i>
-          </div>
-        </div>
+      <div class="dash-actions">
+        <div class="dash-avatar" id="custAvatar">R</div>
+        <button class="btn-ghost" onclick="showAdmin()" style="padding:8px;gap:4px;font-size:12px"><i data-lucide="settings" style="width:16px;height:16px"></i></button>
+        <button class="btn-ghost" onclick="logout()" style="padding:8px;gap:4px;font-size:12px"><i data-lucide="log-out" style="width:16px;height:16px"></i></button>
       </div>
-
-      <!-- MOST BOOKED -->
-      <div class="section">
-        <div class="section-head">
-          <h2>⚡ Most booked services</h2>
-          <span class="see-all">See all</span>
-        </div>
-        <div class="service-row">
-          <div class="svc-card" data-name="Periodic bike service" data-price="699">
-            <div class="svc-thumb"><i data-lucide="clock" style="color:var(--orange)"></i></div>
-            <div class="svc-body">
-              <div class="svc-name">Periodic bike service</div>
-              <div class="svc-rating"><b>4.82</b> (312K)</div>
-              <div class="svc-price">₹699<span class="strike">₹899</span></div>
-            </div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="EV battery health diagnostics" data-price="399">
-            <div class="svc-thumb"><span class="ev-badge">EV</span><i data-lucide="battery-charging" style="color:var(--green)"></i></div>
-            <div class="svc-body">
-              <div class="svc-name">EV battery health diagnostics</div>
-              <div class="svc-rating"><b>4.79</b> (28K)</div>
-              <div class="svc-price">₹399</div>
-            </div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="Car AC service & gas top-up" data-price="899">
-            <div class="svc-thumb"><i data-lucide="fan" style="color:var(--orange)"></i></div>
-            <div class="svc-body">
-              <div class="svc-name">Car AC service &amp; gas top-up</div>
-              <div class="svc-rating"><b>4.75</b> (620K)</div>
-              <div class="svc-price">₹899</div>
-            </div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="Brake pad replacement" data-price="549">
-            <div class="svc-thumb"><i data-lucide="disc" style="color:var(--orange)"></i></div>
-            <div class="svc-body">
-              <div class="svc-name">Brake pad replacement</div>
-              <div class="svc-rating"><b>4.83</b> (96K)</div>
-              <div class="svc-price">₹549</div>
-            </div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="Car foam wash & interior vacuum" data-price="299">
-            <div class="svc-thumb"><i data-lucide="sparkles" style="color:var(--orange)"></i></div>
-            <div class="svc-body">
-              <div class="svc-name">Car foam wash &amp; interior vacuum</div>
-              <div class="svc-rating"><b>4.71</b> (210K)</div>
-              <div class="svc-price">₹299</div>
-            </div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="Tyre replacement (per tyre)" data-price="1499">
-            <div class="svc-thumb"><i data-lucide="circle-dot" style="color:var(--orange)"></i></div>
-            <div class="svc-body">
-              <div class="svc-name">Tyre replacement (per tyre)</div>
-              <div class="svc-rating"><b>4.68</b> (74K)</div>
-              <div class="svc-price">₹1,499</div>
-            </div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- TWO-WHEELER -->
-      <div class="section">
-        <div class="section-head">
-          <h2>🏍 Two-wheeler care</h2>
-          <span class="see-all">See all</span>
-        </div>
-        <div class="service-row">
-          <div class="svc-card" data-name="Chain lube & sprocket check" data-price="149">
-            <div class="svc-thumb"><i data-lucide="link" style="color:var(--orange)"></i></div>
-            <div class="svc-body"><div class="svc-name">Chain lube &amp; sprocket check</div><div class="svc-rating"><b>4.8</b> (54K)</div><div class="svc-price">₹149</div></div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="E-scooter motor inspection" data-price="349">
-            <div class="svc-thumb"><span class="ev-badge">EV</span><i data-lucide="cpu" style="color:var(--green)"></i></div>
-            <div class="svc-body"><div class="svc-name">E-scooter motor inspection</div><div class="svc-rating"><b>4.77</b> (11K)</div><div class="svc-price">₹349</div></div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="Clutch & cable adjustment" data-price="199">
-            <div class="svc-thumb"><i data-lucide="sliders" style="color:var(--orange)"></i></div>
-            <div class="svc-body"><div class="svc-name">Clutch &amp; cable adjustment</div><div class="svc-rating"><b>4.79</b> (38K)</div><div class="svc-price">₹199</div></div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="Tubeless tyre puncture repair" data-price="99">
-            <div class="svc-thumb"><i data-lucide="life-buoy" style="color:var(--orange)"></i></div>
-            <div class="svc-body"><div class="svc-name">Tubeless tyre puncture repair</div><div class="svc-rating"><b>4.81</b> (67K)</div><div class="svc-price">₹99</div></div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- FOUR-WHEELER -->
-      <div class="section">
-        <div class="section-head">
-          <h2>🚗 Four-wheeler care</h2>
-          <span class="see-all">See all</span>
-        </div>
-        <div class="service-row">
-          <div class="svc-card" data-name="Full car service (petrol)" data-price="2499">
-            <div class="svc-thumb"><i data-lucide="car" style="color:var(--orange)"></i></div>
-            <div class="svc-body"><div class="svc-name">Full car service (petrol)</div><div class="svc-rating"><b>4.84</b> (188K)</div><div class="svc-price">₹2,499</div></div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="EV charging port & cable check" data-price="449">
-            <div class="svc-thumb"><span class="ev-badge">EV</span><i data-lucide="plug-zap" style="color:var(--green)"></i></div>
-            <div class="svc-body"><div class="svc-name">EV charging port &amp; cable check</div><div class="svc-rating"><b>4.76</b> (9K)</div><div class="svc-price">₹449</div></div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="Wheel alignment & balancing" data-price="599">
-            <div class="svc-thumb"><i data-lucide="compass" style="color:var(--orange)"></i></div>
-            <div class="svc-body"><div class="svc-name">Wheel alignment &amp; balancing</div><div class="svc-rating"><b>4.78</b> (142K)</div><div class="svc-price">₹599</div></div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-          <div class="svc-card" data-name="Battery jumpstart & replacement" data-price="399">
-            <div class="svc-thumb"><i data-lucide="zap" style="color:var(--orange)"></i></div>
-            <div class="svc-body"><div class="svc-name">Battery jumpstart &amp; replacement</div><div class="svc-rating"><b>4.8</b> (61K)</div><div class="svc-price">₹399</div></div>
-            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- TRUST STRIP -->
-      <div class="trust-strip">
-        <div class="trust-item"><div class="num">4.8</div><div class="lbl">Average<br>service rating</div></div>
-        <div class="trust-item"><div class="num">2M+</div><div class="lbl">Vehicles<br>serviced</div></div>
-        <div class="trust-item"><div class="num">6,500+</div><div class="lbl">Certified<br>mechanics</div></div>
-        <div class="trust-item"><div class="num">30-day</div><div class="lbl">Service<br>warranty</div></div>
-        <div class="trust-item"><div class="num">45 min</div><div class="lbl">Average pickup<br>response</div></div>
-      </div>
-
     </div>
-  </main>
 
-  <!-- ─── FOOTER ─── -->
-  <footer>
-    <div class="wrap">
-      <div class="footer-logo" style="margin-bottom:24px">
-        <a class="logo" href="#">
-          <span class="logo-badge">
-            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23FF5B1E'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='40' font-weight='800' font-family='sans-serif' fill='%23FFF'%3EDM%3C/text%3E%3C/svg%3E" alt="DriveMate">
-          </span>
-          DriveMate
-        </a>
+    <div class="dash-content">
+      <!-- Book Hero -->
+      <div class="book-hero">
+        <h2>Need roadside help?</h2>
+        <p>We'll find the nearest mechanic and get you moving again in minutes.</p>
+        <button class="btn-book" onclick="openBooking()">
+          <i data-lucide="zap" style="width:20px;height:20px"></i>
+          Book a DM Now
+        </button>
       </div>
-      <div class="footer-grid">
-        <div>
-          <h4>Company</h4>
-          <a href="#">About us</a><a href="#">Investor relations</a><a href="#">Terms &amp; conditions</a><a href="#">Privacy policy</a><a href="#">Anti-discrimination policy</a><a href="#">Careers</a>
-        </div>
-        <div>
-          <h4>For customers</h4>
-          <a href="#">DriveMate reviews</a><a href="#">Categories near you</a><a href="#">Contact us</a>
-        </div>
-        <div>
-          <h4>For professionals</h4>
-          <a href="#">Register as a professional</a>
-        </div>
-        <div>
-          <h4>Social links</h4>
-          <div class="social-icons">
-            <a href="#" aria-label="X"><i data-lucide="twitter" style="width:15px;height:15px"></i></a>
-            <a href="#" aria-label="Facebook"><i data-lucide="facebook" style="width:15px;height:15px"></i></a>
-            <a href="#" aria-label="Instagram"><i data-lucide="instagram" style="width:15px;height:15px"></i></a>
-            <a href="#" aria-label="LinkedIn"><i data-lucide="linkedin" style="width:15px;height:15px"></i></a>
-          </div>
-          <div class="store-badge"><i data-lucide="apple" style="width:16px;height:16px"></i><span class="txt"><span class="small">Download on the</span><br><span class="big">App Store</span></span></div>
-          <div class="store-badge"><i data-lucide="play" style="width:16px;height:16px"></i><span class="txt"><span class="small">GET IT ON</span><br><span class="big">Google Play</span></span></div>
-        </div>
+
+      <!-- Active Booking -->
+      <div id="activeBooking" class="hidden">
+        <div class="section-title">📍 Your Active Booking</div>
+        <div id="activeBookingCard"></div>
       </div>
-      <div class="footer-bottom">&copy; 2026 DriveMate Technologies Pvt. Ltd. All rights reserved.</div>
+
+      <!-- Recent Bookings -->
+      <div class="section-title mt-24">📋 Recent Bookings</div>
+      <div id="recentBookings"><div style="text-align:center;padding:40px;color:var(--muted);font-size:14px">No bookings yet. Tap "Book a DM" to get started.</div></div>
     </div>
-  </footer>
+  </div>
 
-  <!-- ─── THREE.JS BACKGROUND SCRIPT ─── -->
-  <script type="module">
-    import * as THREE from 'three';
+  <!-- ─── EMPLOYEE DASHBOARD ─── -->
+  <div class="screen" id="employeeDash">
+    <div class="dash-header">
+      <div class="greeting">
+        <div class="hi">Mechanic Dashboard</div>
+        <div class="name" id="empDisplayName">Vikram</div>
+      </div>
+      <div class="dash-actions">
+        <div class="dash-avatar" id="empAvatar">V</div>
+        <button class="btn-ghost" onclick="showAdmin()" style="padding:8px;gap:4px;font-size:12px"><i data-lucide="settings" style="width:16px;height:16px"></i></button>
+        <button class="btn-ghost" onclick="logout()" style="padding:8px;gap:4px;font-size:12px"><i data-lucide="log-out" style="width:16px;height:16px"></i></button>
+      </div>
+    </div>
 
-    const canvas = document.getElementById('bg-canvas');
-    const scene = new THREE.Scene();
-    scene.background = null;
+    <div class="dash-content">
+      <div class="section-title">🚨 Available Requests</div>
+      <div id="requestList"><div style="text-align:center;padding:40px;color:var(--muted);font-size:14px">No active requests. Waiting for customers...</div></div>
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 40;
+      <div class="section-title mt-24">✅ My Accepted Jobs</div>
+      <div id="acceptedJobs"><div style="text-align:center;padding:20px;color:var(--muted);font-size:14px">No accepted jobs yet.</div></div>
+    </div>
+  </div>
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: false,
-      powerPreference: "high-performance",
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+  <!-- ─── ADMIN PANEL ─── -->
+  <div class="screen" id="adminScreen">
+    <div class="admin-sidebar">
+      <div class="login-logo-img" style="width:40px;height:40px;margin:0 0 16px">
+        <span class="fallback" style="display:flex;font-size:14px">DM</span>
+      </div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:18px;margin-bottom:24px">Admin Panel</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <a class="btn-ghost" style="justify-content:flex-start;width:100%;padding:10px 14px;border-radius:var(--radius-xs)" onclick="showAdminTab('dashboard')"><i data-lucide="layout-dashboard" style="width:16px;height:16px"></i> Dashboard</a>
+        <a class="btn-ghost" style="justify-content:flex-start;width:100%;padding:10px 14px;border-radius:var(--radius-xs)" onclick="showAdminTab('customers')"><i data-lucide="users" style="width:16px;height:16px"></i> Customers</a>
+        <a class="btn-ghost" style="justify-content:flex-start;width:100%;padding:10px 14px;border-radius:var(--radius-xs)" onclick="showAdminTab('mechanics')"><i data-lucide="briefcase" style="width:16px;height:16px"></i> Mechanics</a>
+        <a class="btn-ghost" style="justify-content:flex-start;width:100%;padding:10px 14px;border-radius:var(--radius-xs)" onclick="showAdminTab('bookings')"><i data-lucide="clipboard-list" style="width:16px;height:16px"></i> Bookings</a>
+        <a class="btn-ghost" style="justify-content:flex-start;width:100%;padding:10px 14px;border-radius:var(--radius-xs)" onclick="showAdminTab('reports')"><i data-lucide="bar-chart-3" style="width:16px;height:16px"></i> Reports</a>
+        <div style="flex:1"></div>
+        <a class="btn-ghost" style="justify-content:flex-start;width:100%;padding:10px 14px;border-radius:var(--radius-xs);color:#EF4444" onclick="logout()"><i data-lucide="log-out" style="width:16px;height:16px"></i> Exit</a>
+      </div>
+    </div>
+    <div class="admin-main" id="adminMain">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+        <h1 style="font-family:var(--font-display);font-size:24px;font-weight:800" id="adminTitle">Dashboard</h1>
+        <button class="btn-ghost" onclick="showScreen('customerDash')" style="font-size:12px"><i data-lucide="x" style="width:16px;height:16px"></i> Close</button>
+      </div>
+      <div id="adminContent"></div>
+    </div>
+  </div>
 
-    // ─── STARFIELD ───
-    const starCount = 1800;
-    const starGeo = new THREE.BufferGeometry();
-    const positions = new Float32Array(starCount * 3);
-    const sizes = new Float32Array(starCount);
-    const colors = new Float32Array(starCount * 3);
+  <!-- ─── BOOKING MODAL ─── -->
+  <div class="modal-overlay" id="bookingOverlay" onclick="closeBooking()"></div>
+  <div class="modal" id="bookingModal">
+    <button class="modal-close" onclick="closeBooking()"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+    <h2>Book a DM</h2>
+    <div class="sub" style="color:var(--text-secondary);font-size:13px;margin-bottom:16px">A mechanic will be with you shortly.</div>
+    <div class="step-indicator" id="stepIndicator">
+      <span class="step-dot active"></span><span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span>
+    </div>
 
-    for (let i = 0; i < starCount; i++) {
-      const i3 = i * 3;
-      positions[i3] = (Math.random() - 0.5) * 120;
-      positions[i3+1] = (Math.random() - 0.5) * 80;
-      positions[i3+2] = (Math.random() - 0.5) * 60 - 10;
-      sizes[i] = Math.random() * 1.2 + 0.3;
-      
-      const colorChoice = Math.random();
-      if (colorChoice < 0.6) {
-        // white
-        colors[i3] = 1; colors[i3+1] = 1; colors[i3+2] = 1;
-      } else if (colorChoice < 0.8) {
-        // orange tint
-        colors[i3] = 1; colors[i3+1] = 0.6; colors[i3+2] = 0.2;
-      } else {
-        // blue tint
-        colors[i3] = 0.4; colors[i3+1] = 0.6; colors[i3+2] = 1;
-      }
-    }
+    <!-- Step 1: Vehicle -->
+    <div class="booking-step active" id="step1">
+      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:16px">🚗 Vehicle Details</h3>
+      <div class="input-group"><label>Vehicle Type <span class="req">*</span></label>
+        <div class="input-wrap"><span class="icon"><i data-lucide="truck" style="width:16px;height:16px"></i></span>
+          <select id="bkVehicleType"><option value="" disabled selected>Select type</option>
+            <option>Bike</option><option>Car</option><option>Auto</option><option>Truck</option><option>Other</option>
+          </select><span class="select-arrow"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></span></div></div>
+      <div class="input-group"><label>Brand <span class="req">*</span></label>
+        <div class="input-wrap"><span class="icon"><i data-lucide="building" style="width:16px;height:16px"></i></span><input type="text" id="bkBrand" placeholder="e.g. Honda, Toyota"></div></div>
+      <div class="input-group"><label>Model <span class="req">*</span></label>
+        <div class="input-wrap"><span class="icon"><i data-lucide="car" style="width:16px;height:16px"></i></span><input type="text" id="bkModel" placeholder="e.g. City, Activa"></div></div>
+      <div class="input-group"><label>Registration Number <span class="req">*</span></label>
+        <div class="input-wrap"><span class="icon"><i data-lucide="file-text" style="width:16px;height:16px"></i></span><input type="text" id="bkReg" placeholder="e.g. DL 01 AB 1234"></div></div>
+      <button class="btn-primary" style="width:100%" onclick="bookingNext(2)">Continue <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+    </div>
 
-    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    starGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    starGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    <!-- Step 2: Problem -->
+    <div class="booking-step" id="step2">
+      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:16px">🔧 Breakdown Details</h3>
+      <div class="input-group"><label>What happened? <span class="req">*</span></label>
+        <div class="input-wrap"><span class="icon"><i data-lucide="alert-triangle" style="width:16px;height:16px"></i></span>
+          <select id="bkProblem"><option value="" disabled selected>Select issue</option>
+            <option>Flat Tyre</option><option>Battery Dead</option><option>Engine Issue</option>
+            <option>Fuel Empty</option><option>Accident Assistance</option><option>Brake Problem</option>
+            <option>Clutch Problem</option><option>Lockout</option><option>Overheating</option><option>Other</option>
+          </select><span class="select-arrow"><i data-lucide="chevron-down" style="width:14px;height:14px"></i></span></div></div>
+      <div class="input-group"><label>Describe your issue</label>
+        <div class="input-wrap"><textarea id="bkDescription" placeholder="Briefly describe what happened..." style="padding-left:16px"></textarea></div></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" style="flex:1" onclick="bookingNext(1)"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</button>
+        <button class="btn-primary" style="flex:1" onclick="bookingNext(3)">Continue <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+      </div>
+    </div>
 
-    const starMat = new THREE.PointsMaterial({
-      size: 0.25,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0.8,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      sizeAttenuation: true,
-    });
+    <!-- Step 3: Contact & Location -->
+    <div class="booking-step" id="step3">
+      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:16px">📞 Contact &amp; Location</h3>
+      <div class="input-group"><label>Mobile Number <span class="req">*</span></label>
+        <div class="input-wrap"><span class="icon"><i data-lucide="phone" style="width:16px;height:16px"></i></span><input type="tel" id="bkPhone" placeholder="+91 98765 43210" required></div></div>
+      <div class="input-group"><label>Alternate Mobile (optional)</label>
+        <div class="input-wrap"><span class="icon"><i data-lucide="phone" style="width:16px;height:16px"></i></span><input type="tel" id="bkAltPhone" placeholder="+91 98765 43210"></div></div>
+      <div class="input-group"><label>Share Live Location</label>
+        <button class="btn-secondary" style="width:100%;justify-content:center" onclick="getLocation()">
+          <i data-lucide="map-pin" style="width:16px;height:16px"></i> Detect My Location
+        </button>
+        <div id="locationInfo" class="hidden mt-8" style="font-size:13px;color:var(--text-secondary);padding:14px;background:var(--orange-light);border-radius:var(--radius-xs)">
+          <div id="locationAddress">📍 Estimated address will appear here</div>
+          <div id="locationCoords" style="font-size:12px;margin-top:4px"></div>
+        </div>
+      </div>
+      <div class="input-group"><label>Or search address</label>
+        <div class="input-wrap"><span class="icon"><i data-lucide="search" style="width:16px;height:16px"></i></span><input type="text" id="bkAddress" placeholder="Search your location..."></div></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" style="flex:1" onclick="bookingNext(2)"><i data-lucide="arrow-left" style="width:16px;height:16px"></i> Back</button>
+        <button class="btn-primary" style="flex:1" onclick="bookingNext(4)">Review <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+      </div>
+    </div>
 
-    const stars = new THREE.Points(starGeo, starMat);
-    scene.add(stars);
+    <!-- Step 4: Summary -->
+    <div class="booking-step" id="step4">
+      <h3 style="font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:16px">📋 Booking Summary</h3>
+      <div style="background:var(--surface);border-radius:var(--radius-sm);padding:20px;margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--text-secondary);font-size:13px">Vehicle</span>
+          <span style="font-weight:600;font-size:14px" id="summaryVehicle">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--text-secondary);font-size:13px">Problem</span>
+          <span style="font-weight:600;font-size:14px" id="summaryProblem">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--text-secondary);font-size:13px">Phone</span>
+          <span style="font-weight:600;font-size:14px" id="summaryPhone">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <span style="color:var(--text-secondary);font-size:13px">Location</span>
+          <span style="font-weight:600;font-size:14px" id="summaryLocation">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0">
+          <span style="color:var(--text-secondary);font-size:13px">Est. Arrival</span>
+          <span style="font-weight:600;font-size:14px;color:var(--orange)" id="summaryEta">~8 min</span>
+        </div>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="confirmBooking()">
+        <i data-lucide="check-circle" style="width:18px;height:18px"></i> Confirm Booking
+      </button>
+    </div>
+  </div>
+</div>
 
-    // ─── FLOATING GLOW ORBS ───
-    const orbCount = 8;
-    const orbs = [];
-    for (let i = 0; i < orbCount; i++) {
-      const size = Math.random() * 1.5 + 0.5;
-      const geo = new THREE.SphereGeometry(size, 8, 8);
-      const mat = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(i % 2 === 0 ? 0xFF5B1E : 0x8B5CF6),
-        transparent: true,
-        opacity: Math.random() * 0.12 + 0.03,
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(
-        (Math.random() - 0.5) * 50,
-        (Math.random() - 0.5) * 30,
-        (Math.random() - 0.5) * 40 - 10
-      );
-      mesh.userData = {
-        speedX: (Math.random() - 0.5) * 0.003,
-        speedY: (Math.random() - 0.5) * 0.003,
-        phase: Math.random() * Math.PI * 2,
+<script>
+// ─── STATE ───
+const state = {
+  users: JSON.parse(localStorage.getItem('dm_users')) || { customers: [], employees: [] },
+  bookings: JSON.parse(localStorage.getItem('dm_bookings')) || [],
+  currentUser: null,
+  currentBooking: null,
+  bookingStep: 1,
+  location: null,
+};
+
+function saveState() {
+  localStorage.setItem('dm_users', JSON.stringify(state.users));
+  localStorage.setItem('dm_bookings', JSON.stringify(state.bookings));
+}
+
+// ─── TOAST ───
+function showToast(msg, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info'}" class="toast-icon" style="width:18px;height:18px"></i> ${msg}`;
+  container.appendChild(t);
+  lucide.createIcons();
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 500); }, 3000);
+}
+
+// ─── CONFETTI ───
+function fireConfetti() {
+  const container = document.createElement('div');
+  container.className = 'confetti-container';
+  document.body.appendChild(container);
+  const colors = ['#FF5B1E', '#8B5CF6', '#10B981', '#FFB238', '#EF4444', '#3B82F6'];
+  for (let i = 0; i < 80; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.color = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.width = (Math.random() * 6 + 4) + 'px';
+    piece.style.height = (Math.random() * 6 + 4) + 'px';
+    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    piece.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+    piece.style.animationDelay = (Math.random() * 0.5) + 's';
+    container.appendChild(piece);
+  }
+  setTimeout(() => container.remove(), 3000);
+}
+
+// ─── SCREEN MANAGEMENT ───
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active', 'transitioning'));
+  const screen = document.getElementById(id);
+  if (screen) {
+    screen.classList.add('transitioning');
+    setTimeout(() => {
+      screen.classList.remove('transitioning');
+      screen.classList.add('active');
+    }, 50);
+  }
+}
+
+// ─── LOGIN FLOW ───
+function showLoginOptions() {
+  document.getElementById('loginOptions').style.display = 'block';
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+}
+
+function showAuthForm(type) {
+  document.getElementById('loginOptions').style.display = 'none';
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+  document.getElementById(type + 'Auth').classList.add('active');
+}
+
+function showEmailForm(type) {
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+  document.getElementById(type + 'Email').classList.add('active');
+}
+
+function handleGoogleSignIn(type) {
+  const name = type === 'customer' ? 'Rahul Sharma' : 'Vikram Singh';
+  const user = {
+    id: Date.now().toString(36),
+    type,
+    name,
+    email: type === 'customer' ? 'rahul@gmail.com' : 'vikram@gmail.com',
+    mobile: '+91 98765 43210',
+    loginMethod: 'google',
+  };
+  state.currentUser = user;
+  if (type === 'customer') {
+    state.users.customers.push(user);
+    saveState();
+    showToast('Signed in with Google! 🎉');
+    fireConfetti();
+    setTimeout(() => enterCustomerDashboard(user), 600);
+  } else {
+    state.users.employees.push(user);
+    saveState();
+    showToast('Welcome to DriveMate! 🔧');
+    fireConfetti();
+    setTimeout(() => enterEmployeeDashboard(user), 600);
+  }
+}
+
+function handleCustomerSignin(e) {
+  e.preventDefault();
+  const user = {
+    id: Date.now().toString(36),
+    type: 'customer',
+    name: document.getElementById('custName').value,
+    mobile: document.getElementById('custMobile').value,
+    email: document.getElementById('custEmail').value,
+    loginMethod: 'email',
+  };
+  state.currentUser = user;
+  state.users.customers.push(user);
+  saveState();
+  showToast('Welcome to DriveMate! 🎉');
+  fireConfetti();
+  setTimeout(() => enterCustomerDashboard(user), 600);
+}
+
+function handleEmployeeSignup(e) {
+  e.preventDefault();
+  if (document.getElementById('empPass').value !== document.getElementById('empPassConfirm').value) {
+    showToast('Passwords do not match!', 'error');
+    return;
+  }
+  const user = {
+    id: Date.now().toString(36),
+    type: 'employee',
+    name: document.getElementById('empName').value,
+    mobile: document.getElementById('empMobile').value,
+    email: document.getElementById('empEmail').value,
+    address: document.getElementById('empAddress').value,
+    aadhaar: document.getElementById('empAadhaar').value,
+    experience: document.getElementById('empExp').value,
+    specialization: document.getElementById('empSpecialization').value,
+    loginMethod: 'email',
+    status: 'active',
+  };
+  state.currentUser = user;
+  state.users.employees.push(user);
+  saveState();
+  showToast('Registered successfully! 🔧');
+  fireConfetti();
+  setTimeout(() => enterEmployeeDashboard(user), 600);
+}
+
+function logout() {
+  state.currentUser = null;
+  showScreen('loginScreen');
+  showToast('Logged out', 'info');
+}
+
+// ─── CUSTOMER DASHBOARD ───
+function enterCustomerDashboard(user) {
+  showScreen('customerDash');
+  document.getElementById('custDisplayName').textContent = user.name.split(' ')[0];
+  document.getElementById('custAvatar').textContent = user.name.charAt(0);
+
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
+  document.getElementById('custGreeting').textContent = greet + ',';
+
+  renderRecentBookings();
+
+  // Check active booking
+  const active = state.bookings.find(b => b.customerId === user.id && b.status !== 'completed');
+  if (active) {
+    state.currentBooking = active;
+    renderActiveBooking(active);
+  }
+}
+
+function renderRecentBookings() {
+  const container = document.getElementById('recentBookings');
+  const userBookings = state.bookings.filter(b => b.customerId === state.currentUser?.id).reverse();
+  if (userBookings.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px">No bookings yet. Tap "Book a DM" to get started.</div>';
+    return;
+  }
+  container.innerHTML = userBookings.map(b => `
+    <div class="request-card">
+      <div class="req-row"><span class="req-label">Problem</span><span class="req-value">${b.problem}</span></div>
+      <div class="req-row"><span class="req-label">Vehicle</span><span class="req-value">${b.vehicleBrand} ${b.vehicleModel}</span></div>
+      <div class="req-row"><span class="req-label">Status</span><span class="badge ${b.status === 'completed' ? 'normal' : 'urgent'}">${b.status}</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">${new Date(b.createdAt).toLocaleString()}</div>
+    </div>
+  `).join('');
+}
+
+// ─── BOOKING FLOW ───
+function openBooking() {
+  state.bookingStep = 1;
+  document.getElementById('bookingOverlay').classList.add('open');
+  document.getElementById('bookingModal').classList.add('open');
+  updateBookingSteps();
+  document.body.style.overflow = 'hidden';
+}
+
+function closeBooking() {
+  document.getElementById('bookingOverlay').classList.remove('open');
+  document.getElementById('bookingModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function bookingNext(step) {
+  state.bookingStep = step;
+  updateBookingSteps();
+}
+
+function updateBookingSteps() {
+  document.querySelectorAll('.booking-step').forEach((el, i) => {
+    el.classList.toggle('active', i + 1 === state.bookingStep);
+  });
+  document.querySelectorAll('.step-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i + 1 === state.bookingStep);
+    dot.classList.toggle('done', i + 1 < state.bookingStep);
+  });
+
+  // Update summary on step 4
+  if (state.bookingStep === 4) {
+    document.getElementById('summaryVehicle').textContent = 
+      document.getElementById('bkVehicleType').value + ' · ' + 
+      document.getElementById('bkBrand').value + ' ' + 
+      document.getElementById('bkModel').value;
+    document.getElementById('summaryProblem').textContent = document.getElementById('bkProblem').value;
+    document.getElementById('summaryPhone').textContent = document.getElementById('bkPhone').value;
+    document.getElementById('summaryLocation').textContent = state.location ? 
+      (state.location.address || state.location.lat.toFixed(4) + ', ' + state.location.lng.toFixed(4)) : 
+      'Not set';
+  }
+}
+
+function getLocation() {
+  if (!navigator.geolocation) {
+    showToast('Geolocation not supported', 'error');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      state.location = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        address: `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`,
       };
-      scene.add(mesh);
-      orbs.push(mesh);
+      document.getElementById('locationInfo').classList.remove('hidden');
+      document.getElementById('locationAddress').textContent = `📍 Current Location`;
+      document.getElementById('locationCoords').textContent = `Lat: ${pos.coords.latitude.toFixed(4)} · Lng: ${pos.coords.longitude.toFixed(4)}`;
+      showToast('Location detected! 📍');
+    },
+    () => {
+      showToast('Could not get location. Enter manually.', 'error');
     }
+  );
+}
 
-    // ─── RESIZE ───
-    window.addEventListener('resize', () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    });
+function confirmBooking() {
+  const booking = {
+    id: 'BK' + Date.now().toString(36).toUpperCase(),
+    customerId: state.currentUser.id,
+    customerName: state.currentUser.name,
+    customerPhone: document.getElementById('bkPhone').value,
+    vehicleType: document.getElementById('bkVehicleType').value,
+    vehicleBrand: document.getElementById('bkBrand').value,
+    vehicleModel: document.getElementById('bkModel').value,
+    vehicleReg: document.getElementById('bkReg').value,
+    problem: document.getElementById('bkProblem').value,
+    description: document.getElementById('bkDescription').value,
+    location: state.location || { lat: 28.6139, lng: 77.2090, address: 'New Delhi, India' },
+    status: 'pending',
+    mechanicId: null,
+    createdAt: Date.now(),
+    eta: '8 min',
+    tracking: [
+      { label: 'Looking for a mechanic', done: true },
+      { label: 'Mechanic assigned', done: false },
+      { label: 'On the way', done: false },
+      { label: 'Repair started', done: false },
+      { label: 'Repair completed', done: false },
+    ],
+  };
 
-    // ─── ANIMATION ───
-    function animate() {
-      // Rotate starfield very slowly
-      stars.rotation.y += 0.00015;
-      stars.rotation.x += 0.00005;
+  state.bookings.push(booking);
+  state.currentBooking = booking;
+  saveState();
+  closeBooking();
 
-      // Float orbs gently
-      orbs.forEach((orb, i) => {
-        orb.position.x += Math.sin(Date.now() * 0.0003 + i) * 0.002;
-        orb.position.y += Math.cos(Date.now() * 0.0002 + i) * 0.002;
-      });
+  showToast('Booking confirmed! Finding a mechanic... 🚀');
+  fireConfetti();
 
-      renderer.render(scene, camera);
-      requestAnimationFrame(animate);
-    }
-    animate();
+  // Simulate mechanic assignment after 2 seconds
+  setTimeout(() => {
+    assignMechanic(booking);
+  }, 2000);
 
-    // ─── CART SYSTEM ───
-    let cart = JSON.parse(localStorage.getItem('driveMateCart')) || [];
+  renderRecentBookings();
+  renderActiveBooking(booking);
+}
 
-    function saveCart(){
-      localStorage.setItem('driveMateCart', JSON.stringify(cart));
-      updateCartUI();
-    }
+function assignMechanic(booking) {
+  const mechanics = state.users.employees.filter(e => e.type === 'employee' && e.status === 'active');
+  if (mechanics.length > 0) {
+    const mechanic = mechanics[Math.floor(Math.random() * mechanics.length)];
+    booking.mechanicId = mechanic.id;
+    booking.status = 'assigned';
+    booking.tracking[1].done = true;
+    booking.assignedMechanic = mechanic;
+    saveState();
 
-    window.addToCart = function(btn) {
-      const card = btn.closest('.svc-card');
-      if (!card) return;
-      const name = card.dataset.name;
-      const price = parseInt(card.dataset.price);
-      const existing = cart.find(item => item.name === name);
-      if (existing) { existing.qty += 1; }
-      else { cart.push({ name, price, qty: 1 }); }
-      saveCart();
-      btn.classList.add('added');
-      btn.textContent = '✓';
-      setTimeout(() => { btn.classList.remove('added'); btn.textContent = '+'; }, 1200);
-      showToast(`Added ${name} ✓`);
-    };
+    showToast(`🔧 ${mechanic.name} is assigned to your request!`);
 
-    window.removeFromCart = function(name) {
-      cart = cart.filter(item => item.name !== name);
-      saveCart();
-    };
-
-    window.updateQty = function(name, delta) {
-      const item = cart.find(i => i.name === name);
-      if (!item) return;
-      item.qty += delta;
-      if (item.qty <= 0) cart = cart.filter(i => i.name !== name);
-      saveCart();
-    };
-
-    function updateCartUI(){
-      const container = document.getElementById('cartItems');
-      const footer = document.getElementById('cartFooter');
-      const totalSpan = document.getElementById('cartTotal');
-      const badge = document.getElementById('cartBadge');
-      const totalItems = cart.reduce((sum, i) => sum + i.qty, 0);
-      const totalPrice = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-      badge.textContent = totalItems;
-
-      if (cart.length === 0) {
-        container.innerHTML = `<div class="cart-empty"><i data-lucide="shopping-bag" style="width:44px;height:44px;color:var(--muted)"></i><p>Nothing added yet.</p></div>`;
-        footer.style.display = 'none';
-        lucide.createIcons();
-        return;
+    // Simulate progress
+    setTimeout(() => {
+      booking.status = 'traveling';
+      booking.tracking[2].done = true;
+      saveState();
+      renderActiveBooking(booking);
+      if (document.getElementById('customerDash').classList.contains('active')) {
+        showToast('🔧 Mechanic is on the way!');
       }
-      footer.style.display = 'block';
-      totalSpan.textContent = `₹${totalPrice.toLocaleString('en-IN')}`;
-      container.innerHTML = cart.map((item, idx) => `
-        <div class="cart-item" style="animation-delay:${idx * 0.04}s">
-          <div class="cart-item-info">
-            <div class="cart-item-name">${item.name}</div>
-            <div class="cart-item-price">₹${item.price}</div>
-            <div class="cart-item-qty">
-              <button onclick="updateQty('${item.name.replace(/'/g, "\\'")}', -1)">−</button>
-              <span>${item.qty}</span>
-              <button onclick="updateQty('${item.name.replace(/'/g, "\\'")}', 1)">+</button>
-            </div>
-          </div>
-          <button class="cart-item-remove" onclick="removeFromCart('${item.name.replace(/'/g, "\\'")}')" title="Remove">
-            <i data-lucide="trash-2" style="width:14px;height:14px"></i>
-          </button>
+    }, 5000);
+
+    setTimeout(() => {
+      booking.status = 'repairing';
+      booking.tracking[3].done = true;
+      saveState();
+      renderActiveBooking(booking);
+    }, 12000);
+
+    setTimeout(() => {
+      booking.status = 'completed';
+      booking.tracking[4].done = true;
+      saveState();
+      renderActiveBooking(booking);
+      renderRecentBookings();
+      showToast('✅ Repair completed! Please rate your experience.');
+    }, 20000);
+  }
+}
+
+function renderActiveBooking(booking) {
+  const container = document.getElementById('activeBooking');
+  const card = document.getElementById('activeBookingCard');
+  container.classList.remove('hidden');
+
+  const mechanic = booking.assignedMechanic;
+  const progress = booking.tracking.filter(t => t.done).length;
+  const total = booking.tracking.length;
+  const pct = (progress / total) * 100;
+
+  card.innerHTML = `
+    <div class="tracking-card">
+      <div class="tracking-header">
+        <div class="tracking-avatar">${mechanic ? mechanic.name.charAt(0) : '?'}</div>
+        <div class="tracking-info">
+          <div class="name">${mechanic ? mechanic.name : 'Finding mechanic...'}</div>
+          <div class="detail">${mechanic ? mechanic.specialization || 'Mechanic' : 'Searching nearby'}</div>
         </div>
-      `).join('');
-      lucide.createIcons();
-    }
+        <div style="text-align:right">
+          <div style="font-family:var(--font-display);font-weight:700;font-size:18px;color:var(--orange)">${booking.eta}</div>
+          <div style="font-size:11px;color:var(--muted)">ETA</div>
+        </div>
+      </div>
 
-    function showToast(msg) {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = 'toast';
-      toast.innerHTML = `<i data-lucide="check-circle" class="toast-icon" style="width:16px;height:16px"></i> ${msg}`;
-      container.appendChild(toast);
-      lucide.createIcons();
-      setTimeout(() => toast.remove(), 2500);
-    }
+      <div style="height:6px;background:var(--border);border-radius:4px;overflow:hidden;margin-bottom:12px">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--orange),var(--green));border-radius:4px;transition:width 1s var(--ease-expo)"></div>
+      </div>
 
-    // Cart sidebar
-    document.getElementById('cartToggle').addEventListener('click', () => {
-      document.getElementById('cartSidebar').classList.add('open');
-      document.getElementById('cartOverlay').classList.add('open');
-      document.body.style.overflow = 'hidden';
-    });
-    document.getElementById('cartClose').addEventListener('click', () => {
-      document.getElementById('cartSidebar').classList.remove('open');
-      document.getElementById('cartOverlay').classList.remove('open');
-      document.body.style.overflow = '';
-    });
-    document.getElementById('cartOverlay').addEventListener('click', () => {
-      document.getElementById('cartSidebar').classList.remove('open');
-      document.getElementById('cartOverlay').classList.remove('open');
-      document.body.style.overflow = '';
-    });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') {
-        document.getElementById('cartSidebar').classList.remove('open');
-        document.getElementById('cartOverlay').classList.remove('open');
-        document.body.style.overflow = '';
-      }
-    });
+      <div class="tracking-status">
+        <span class="status-dot"></span>
+        <span class="status-text">${booking.status === 'pending' ? 'Looking for mechanic...' : 
+          booking.status === 'assigned' ? 'Mechanic assigned!' :
+          booking.status === 'traveling' ? 'Mechanic is on the way...' :
+          booking.status === 'repairing' ? 'Repair in progress...' :
+          'Repair completed! ✅'}</span>
+      </div>
 
-    updateCartUI();
-    lucide.createIcons();
-  </script>
+      ${mechanic ? `
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <a href="tel:${mechanic.mobile || '+919876543210'}" class="btn-secondary" style="flex:1;justify-content:center;padding:12px;font-size:13px">
+          <i data-lucide="phone" style="width:16px;height:16px"></i> Call
+        </a>
+        <button class="btn-secondary" style="flex:1;justify-content:center;padding:12px;font-size:13px" onclick="showToast('GPS navigation opened 🗺️')">
+          <i data-lucide="navigation" style="width:16px;height:16px"></i> Navigate
+        </button>
+      </div>
+      ` : ''}
+
+      <div class="tracking-timeline">
+        ${booking.tracking.map((t, i) => `
+          <div class="tl-item ${t.done ? 'done' : ''} ${t.done && i === progress - 1 ? 'active' : ''}">
+            <span class="tl-dot"></span>
+            <span>${t.label}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      ${booking.status === 'completed' ? `
+      <div style="margin-top:16px;padding:16px;background:var(--orange-light);border-radius:var(--radius-xs);text-align:center">
+        <div style="font-weight:700;font-size:16px;margin-bottom:8px">⭐ Rate Your Experience</div>
+        <div style="display:flex;gap:6px;justify-content:center;font-size:28px;margin-bottom:8px">
+          ${[1,2,3,4,5].map(i => `<span style="cursor:pointer" onclick="showToast('Rated ${i} star${i > 1 ? 's' : ''}! ⭐')">☆</span>`).join('')}
+        </div>
+        <input type="text" placeholder="Share your feedback..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-xs);font-size:13px;background:var(--bg)">
+        <button class="btn-primary" style="width:100%;margin-top:10px;padding:12px" onclick="showToast('Thank you for your feedback! 🙏')">Submit Feedback</button>
+      </div>
+      ` : ''}
+    </div>
+  `;
+  lucide.createIcons();
+}
+
+// ─── EMPLOYEE DASHBOARD ───
+function enterEmployeeDashboard(user) {
+  showScreen('employeeDash');
+  document.getElementById('empDisplayName').textContent = user.name;
+  document.getElementById('empAvatar').textContent = user.name.charAt(0);
+  renderRequests();
+  renderAcceptedJobs();
+}
+
+function renderRequests() {
+  const container = document.getElementById('requestList');
+  const pending = state.bookings.filter(b => b.status === 'pending' || b.status === 'assigned');
+  
+  if (pending.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px">No active requests. Waiting for customers...</div>';
+    return;
+  }
+
+  container.innerHTML = pending.map(b => `
+    <div class="request-card">
+      <span class="badge ${b.status === 'pending' ? 'urgent' : 'normal'}">${b.status === 'pending' ? 'NEW' : 'ASSIGNED'}</span>
+      <div class="req-row"><span class="req-label">Customer</span><span class="req-value">${b.customerName}</span></div>
+      <div class="req-row"><span class="req-label">Vehicle</span><span class="req-value">${b.vehicleType} · ${b.vehicleBrand} ${b.vehicleModel}</span></div>
+      <div class="req-row"><span class="req-label">Problem</span><span class="req-value">${b.problem}</span></div>
+      <div class="req-row"><span class="req-label">Phone</span><span class="req-value">${b.customerPhone}</span></div>
+      <div class="req-row"><span class="req-label">Location</span><span class="req-value" style="font-size:12px">${b.location?.address || 'N/A'}</span></div>
+      <div class="req-row"><span class="req-label">Distance</span><span class="req-value" style="color:var(--orange)">~${(Math.random() * 5 + 1).toFixed(1)} km</span></div>
+      <div class="req-actions">
+        <button style="background:var(--green);color:#FFF;border:none" onclick="acceptRequest('${b.id}')">
+          <i data-lucide="check" style="width:14px;height:14px"></i> Accept
+        </button>
+        <button style="background:transparent;color:var(--text-secondary);border:1px solid var(--border)" onclick="rejectRequest('${b.id}')">
+          Reject
+        </button>
+      </div>
+    </div>
+  `).join('');
+  lucide.createIcons();
+}
+
+function acceptRequest(id) {
+  const booking = state.bookings.find(b => b.id === id);
+  if (!booking) return;
+  
+  booking.status = 'assigned';
+  booking.mechanicId = state.currentUser.id;
+  booking.assignedMechanic = state.currentUser;
+  booking.tracking[1].done = true;
+  booking.eta = Math.floor(Math.random() * 10 + 5) + ' min';
+  saveState();
+
+  showToast(`✅ Accepted request from ${booking.customerName}!`);
+  renderRequests();
+  renderAcceptedJobs();
+
+  // Notify customer if they're in the dashboard
+  const custScreen = document.getElementById('customerDash');
+  if (custScreen.classList.contains('active')) {
+    showToast(`🔧 ${state.currentUser.name} accepted your request!`);
+  }
+}
+
+function rejectRequest(id) {
+  showToast('Request rejected', 'info');
+}
+
+function renderAcceptedJobs() {
+  const container = document.getElementById('acceptedJobs');
+  const jobs = state.bookings.filter(b => b.mechanicId === state.currentUser?.id && b.status !== 'completed');
+  
+  if (jobs.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:14px">No accepted jobs yet.</div>';
+    return;
+  }
+
+  container.innerHTML = jobs.map(b => `
+    <div class="request-card" style="border-left:3px solid var(--orange)">
+      <div class="req-row"><span class="req-label">Customer</span><span class="req-value">${b.customerName}</span></div>
+      <div class="req-row"><span class="req-label">Vehicle</span><span class="req-value">${b.vehicleBrand} ${b.vehicleModel} · ${b.vehicleReg}</span></div>
+      <div class="req-row"><span class="req-label">Problem</span><span class="req-value">${b.problem}</span></div>
+      <div class="req-row"><span class="req-label">Location</span><span class="req-value" style="font-size:12px">${b.location?.address || 'N/A'}</span></div>
+      <div style="margin-top:10px">
+        <button class="btn-primary" style="width:100%;padding:12px;font-size:13px" onclick="completeService('${b.id}')">
+          <i data-lucide="check-circle" style="width:16px;height:16px"></i> Complete Service
+        </button>
+      </div>
+    </div>
+  `).join('');
+  lucide.createIcons();
+}
+
+function completeService(id) {
+  const booking = state.bookings.find(b => b.id === id);
+  if (!booking) return;
+  
+  booking.status = 'completed';
+  booking.tracking[4].done = true;
+  saveState();
+
+  showToast('✅ Service completed! Invoice generated.');
+  fireConfetti();
+  renderAcceptedJobs();
+  renderRequests();
+
+  // Notify customer
+  showToast(`✅ Your service is complete! Please rate your experience.`);
+}
+
+// ─── ADMIN PANEL ───
+function showAdmin() {
+  showScreen('adminScreen');
+  showAdminTab('dashboard');
+}
+
+function showAdminTab(tab) {
+  const content = document.getElementById('adminContent');
+  document.getElementById('adminTitle').textContent = tab.charAt(0).toUpperCase() + tab.slice(1);
+
+  if (tab === 'dashboard') {
+    const totalCustomers = state.users.customers.length;
+    const totalMechanics = state.users.employees.length;
+    const totalBookings = state.bookings.length;
+    const completed = state.bookings.filter(b => b.status === 'completed').length;
+    const revenue = completed * (Math.random() * 500 + 200);
+
+    content.innerHTML = `
+      <div class="admin-stats">
+        <div class="stat-card"><div class="num">${totalCustomers}</div><div class="lbl">Total Customers</div></div>
+        <div class="stat-card"><div class="num">${totalMechanics}</div><div class="lbl">Active Mechanics</div></div>
+        <div class="stat-card"><div class="num">${totalBookings}</div><div class="lbl">Total Bookings</div></div>
+        <div class="stat-card"><div class="num">${completed}</div><div class="lbl">Completed Repairs</div></div>
+        <div class="stat-card"><div class="num">₹${revenue.toFixed(0)}</div><div class="lbl">Estimated Revenue</div></div>
+      </div>
+      <div style="background:var(--surface);border-radius:var(--radius);padding:20px;border:1px solid var(--border)">
+        <h3 style="font-family:var(--font-display);font-weight:700;margin-bottom:12px">Recent Activity</h3>
+        ${state.bookings.slice(-5).reverse().map(b => `
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+            <span>${b.customerName} — ${b.problem}</span>
+            <span style="color:var(--text-secondary)">${new Date(b.createdAt).toLocaleString()}</span>
+          </div>
+        `).join('') || '<div style="color:var(--muted);font-size:13px">No activity yet.</div>'}
+      </div>
+    `;
+  } else if (tab === 'customers') {
+    content.innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <tr><th>Name</th><th>Email</th><th>Mobile</th><th>Status</th><th>Actions</th></tr>
+          ${state.users.customers.map(c => `
+            <tr>
+              <td style="font-weight:600">${c.name}</td>
+              <td>${c.email}</td>
+              <td>${c.mobile}</td>
+              <td><span class="admin-badge active">Active</span></td>
+              <td><button class="btn-ghost" style="padding:4px 8px;font-size:12px" onclick="showToast('User suspended')">Suspend</button></td>
+            </tr>
+          `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No customers</td></tr>'}
+        </table>
+      </div>
+    `;
+  } else if (tab === 'mechanics') {
+    content.innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <tr><th>Name</th><th>Specialization</th><th>Experience</th><th>Status</th><th>Actions</th></tr>
+          ${state.users.employees.map(e => `
+            <tr>
+              <td style="font-weight:600">${e.name}</td>
+              <td>${e.specialization || 'General'}</td>
+              <td>${e.experience || 'N/A'} yrs</td>
+              <td><span class="admin-badge ${e.status === 'active' ? 'active' : 'suspended'}">${e.status || 'active'}</span></td>
+              <td>
+                <button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--green)" onclick="showToast('Mechanic approved')">Approve</button>
+                <button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:#EF4444" onclick="showToast('Mechanic suspended')">Suspend</button>
+              </td>
+            </tr>
+          `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted)">No mechanics</td></tr>'}
+        </table>
+      </div>
+    `;
+  } else if (tab === 'bookings') {
+    content.innerHTML = `
+      <div style="overflow-x:auto">
+        <table class="admin-table">
+          <tr><th>ID</th><th>Customer</th><th>Vehicle</th><th>Problem</th><th>Status</th><th>Actions</th></tr>
+          ${state.bookings.map(b => `
+            <tr>
+              <td style="font-family:var(--font-mono);font-size:12px">${b.id}</td>
+              <td style="font-weight:600">${b.customerName}</td>
+              <td>${b.vehicleBrand} ${b.vehicleModel}</td>
+              <td>${b.problem}</td>
+              <td><span class="admin-badge ${b.status === 'completed' ? 'active' : b.status === 'pending' ? 'pending' : ''}">${b.status}</span></td>
+              <td><button class="btn-ghost" style="padding:4px 8px;font-size:12px" onclick="showToast('Booking details opened')">View</button></td>
+            </tr>
+          `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No bookings</td></tr>'}
+        </table>
+      </div>
+    `;
+  } else if (tab === 'reports') {
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px">
+        <div class="glass-card" style="padding:24px">
+          <h3 style="font-family:var(--font-display);font-weight:700;margin-bottom:12px">📊 Service Distribution</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${['Flat Tyre','Battery Dead','Engine Issue','Fuel Empty','Other'].map(p => `
+              <div style="display:flex;justify-content:space-between;font-size:13px">
+                <span>${p}</span>
+                <span style="font-weight:600">${Math.floor(Math.random() * 30 + 5)}%</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="glass-card" style="padding:24px">
+          <h3 style="font-family:var(--font-display);font-weight:700;margin-bottom:12px">💰 Revenue</h3>
+          <div style="font-size:36px;font-weight:800;color:var(--orange);font-family:var(--font-display)">
+            ₹${(state.bookings.filter(b => b.status === 'completed').length * (Math.random() * 300 + 200)).toFixed(0)}
+          </div>
+          <div style="color:var(--muted);font-size:13px;margin-top:4px">From ${state.bookings.filter(b => b.status === 'completed').length} completed services</div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// ─── INIT ───
+function init() {
+  // Demo data
+  if (state.users.customers.length === 0) {
+    state.users.customers.push({
+      id: 'demo_cust',
+      type: 'customer',
+      name: 'Rahul Sharma',
+      email: 'rahul@example.com',
+      mobile: '+91 98765 43210',
+      loginMethod: 'demo',
+    });
+  }
+  if (state.users.employees.length === 0) {
+    state.users.employees.push({
+      id: 'demo_emp',
+      type: 'employee',
+      name: 'Vikram Singh',
+      email: 'vikram@drivemate.in',
+      mobile: '+91 98765 43211',
+      address: 'New Delhi, India',
+      specialization: 'Car Mechanic',
+      experience: '8',
+      status: 'active',
+      loginMethod: 'demo',
+    });
+  }
+  saveState();
+}
+
+init();
+lucide.createIcons();
+</script>
 </body>
 </html>
