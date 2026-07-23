@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DriveMate — roadside, redefined.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    :root{
+      --bg:#06070A;--surface:#0B0E16;--card:rgba(16,20,34,0.6);--card-hover:rgba(26,32,54,0.8);
+      --border:rgba(255,255,255,0.05);--border-active:rgba(255,91,30,0.5);
+      --orange:#FF5B1E;--orange-soft:rgba(255,91,30,0.1);--orange-glow:rgba(255,91,30,0.2);
+      --green:#10B981;--purple:#8B5CF6;--text:#ECEEF6;--muted:#7C84A0;
+      --font-display:'Space Grotesk',sans-serif;--font-body:'Inter',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+      --radius:18px;--radius-sm:12px;--radius-xs:8px;
+      --ease-expo:cubic-bezier(0.16,1,0.3,1);--ease-spring:cubic-bezier(0.34,1.56,0.64,1);--ease-smooth:cubic-bezier(0.65,0,0.35,1);
+    }
+    body{background:var(--bg);color:var(--text);font-family:var(--font-body);overflow-x:hidden;line-height:1.5;-webkit-font-smoothing:antialiased}
+    a{text-decoration:none;color:inherit}
+
+    /* ─── TOOL PARTICLE CANVAS ─── */
+    #toolCanvas{
+      position:fixed;inset:0;pointer-events:none;z-index:1;
+    }
+
+    /* ─── SCROLL PROGRESS ─── */
+    .scroll-progress{
+      position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--orange),var(--purple),var(--orange));
+      background-size:200% 100%;z-index:200;width:0%;transition:width .1s linear;
+      animation:gradientShift 3s linear infinite;
+    }
+    @keyframes gradientShift{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    /* ─── HEADER ─── */
+    header{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      background:rgba(6,7,10,.5);backdrop-filter:blur(28px) saturate(1.4);
+      border-bottom:1px solid var(--border);transition:transform .5s var(--ease-expo),background .5s;
+    }
+    header.hidden{transform:translateY(-120%)}
+    header.scrolled{background:rgba(6,7,10,.85);backdrop-filter:blur(32px) saturate(1.6)}
+
+    .header-inner{
+      max-width:1260px;margin:0 auto;padding:0 28px;height:66px;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+    }
+
+    .logo{
+      display:flex;align-items:center;gap:12px;flex-shrink:0;
+      font-family:var(--font-display);font-size:20px;font-weight:700;color:#FFF;letter-spacing:-.4px;
+      position:relative;transition:opacity .3s;
+    }
+    .logo:hover{opacity:.88}
+
+    .logo-badge{
+      width:38px;height:38px;border-radius:50%;
+      background:linear-gradient(135deg,#FF5B1E,#C83C00);display:flex;align-items:center;justify-content:center;
+      border:2px solid rgba(255,255,255,.1);box-shadow:0 4px 20px rgba(255,91,30,.35);
+      overflow:hidden;flex-shrink:0;position:relative;
+      transition:transform .5s var(--ease-spring),box-shadow .5s;
+    }
+    .logo:hover .logo-badge{transform:scale(1.08) rotate(-6deg);box-shadow:0 6px 32px rgba(255,91,30,.5)}
+
+    .logo-badge img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+
+    .logo-road{
+      position:absolute;bottom:-3px;left:0;width:100%;height:4px;
+      background:linear-gradient(90deg,transparent,var(--orange),var(--purple),transparent);
+      border-radius:2px;opacity:.6;animation:roadGlow 3s ease-in-out infinite;
+    }
+    @keyframes roadGlow{0%,100%{opacity:.3;transform:scaleX(.8)}50%{opacity:.8;transform:scaleX(1)}}
+
+    /* ─── GLASS NAV TABS ─── */
+    .header-tabs{display:flex;align-items:center;gap:2px;list-style:none}
+    .nav-item{
+      position:relative;padding:20px 14px;cursor:pointer;border-radius:var(--radius-xs);
+      transition:all .3s;
+    }
+    .nav-item:hover{background:rgba(255,255,255,.025)}
+    .nav-item>span{
+      font-size:12px;font-weight:500;color:var(--muted);letter-spacing:.04em;
+      transition:color .3s;display:flex;align-items:center;gap:4px;
+    }
+    .nav-item>span .nav-dot{
+      width:4px;height:4px;border-radius:50%;background:var(--orange);
+      opacity:0;transform:scale(0);transition:all .35s var(--ease-spring);
+    }
+    .nav-item:hover>span{color:#FFF}
+    .nav-item:hover>span .nav-dot{opacity:1;transform:scale(1)}
+
+    .mega{
+      position:absolute;top:calc(100% - 2px);left:50%;transform:translateX(-50%) translateY(10px);
+      width:360px;background:rgba(11,14,22,.88);backdrop-filter:blur(32px) saturate(1.6);
+      border:1px solid var(--border);border-radius:var(--radius-sm);
+      padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;
+      box-shadow:0 32px 80px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.015) inset;
+      opacity:0;visibility:hidden;transition:all .4s var(--ease-expo);
+      pointer-events:none;
+    }
+    .nav-item:hover .mega{
+      opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);
+      pointer-events:auto;
+    }
+    .mega-col h5{
+      font-family:var(--font-display);font-size:10px;font-weight:600;color:var(--orange);
+      margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;
+    }
+    .mega-col a{
+      display:block;font-size:12px;color:var(--muted);padding:4px 0;
+      transition:all .3s;position:relative;width:fit-content;
+    }
+    .mega-col a::after{
+      content:'';position:absolute;bottom:3px;left:0;width:0;height:1.5px;
+      background:var(--orange);transition:width .4s var(--ease-expo);
+    }
+    .mega-col a:hover{color:#FFF;transform:translateX(6px)}
+    .mega-col a:hover::after{width:100%}
+
+    .location{
+      display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
+      background:rgba(255,255,255,.025);padding:7px 12px;border-radius:var(--radius-xs);
+      border:1px solid var(--border);cursor:pointer;transition:all .3s;white-space:nowrap;
+    }
+    .location:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
+
+    .search-bar{
+      display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);
+      background:rgba(255,255,255,.025);padding:7px 12px;border-radius:var(--radius-xs);
+      border:1px solid var(--border);width:180px;cursor:text;
+      transition:all .35s;
+    }
+    .search-bar:focus-within{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-soft);width:220px}
+
+    .header-right{display:flex;align-items:center;gap:8px}
+
+    .icon-btn{
+      position:relative;width:38px;height:38px;border-radius:var(--radius-xs);
+      background:rgba(255,255,255,.025);border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;color:#FFF;
+      transition:all .3s;
+    }
+    .icon-btn:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);transform:scale(1.04)}
+
+    .badge-dot{
+      position:absolute;top:-4px;right:-4px;background:var(--orange);color:#FFF;
+      font-size:10px;font-weight:700;width:18px;height:18px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);
+      box-shadow:0 2px 12px rgba(255,91,30,.5);
+      transition:transform .4s var(--ease-spring);
+    }
+    .badge-dot.bump{animation:bump .4s var(--ease-spring)}
+    @keyframes bump{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+
+    .avatar{
+      width:38px;height:38px;border-radius:var(--radius-xs);
+      background:rgba(255,255,255,.025);border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;color:#FFF;
+      transition:all .3s;
+    }
+    .avatar:hover{border-color:var(--orange);background:var(--orange-soft);transform:scale(1.04)}
+
+    /* ─── HERO ─── */
+    .hero{
+      padding-top:140px;padding-bottom:40px;text-align:center;position:relative;z-index:2;
+    }
+
+    .hero-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:var(--orange-soft);border:1px solid var(--border-active);
+      border-radius:100px;padding:5px 14px 5px 6px;font-size:11px;font-weight:600;
+      color:var(--orange);margin-bottom:20px;position:relative;
+      animation:fadeSlideUp .8s var(--ease-expo) both;
+    }
+    .hero-badge-dot{
+      width:6px;height:6px;border-radius:50%;background:var(--orange);
+      animation:dotPulse 2s ease-in-out infinite;
+    }
+    @keyframes dotPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+
+    .hero-drivemate{
+      position:relative;display:inline-block;margin-bottom:12px;
+    }
+    .hero-drivemate h1{
+      font-family:var(--font-display);font-size:clamp(36px,6vw,60px);font-weight:800;
+      letter-spacing:-2px;line-height:1.06;
+      background:linear-gradient(135deg,#FFF 30%,var(--orange) 100%);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      animation:fadeSlideUp .8s var(--ease-expo) .1s both;
+      position:relative;
+    }
+    .hero-drivemate-road{
+      position:absolute;bottom:2px;left:5%;width:90%;height:5px;
+      background:linear-gradient(90deg,transparent,var(--orange),var(--purple),transparent);
+      border-radius:4px;opacity:.4;
+      animation:roadLine 2.5s ease-in-out infinite;
+    }
+    @keyframes roadLine{0%,100%{transform:scaleX(.7);opacity:.2}50%{transform:scaleX(1);opacity:.6}}
+
+    .hero-drivemate::before{
+      content:'⚡';position:absolute;top:-10px;left:-28px;font-size:20px;
+      animation:sparkBounce 2s ease-in-out infinite;
+    }
+    .hero-drivemate::after{
+      content:'🔧';position:absolute;bottom:-10px;right:-28px;font-size:18px;
+      animation:sparkBounce 2s ease-in-out infinite .3s;
+    }
+    @keyframes sparkBounce{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-6px) rotate(12deg)}}
+
+    .hero .sub{
+      font-size:clamp(14px,1.5vw,17px);color:var(--muted);font-weight:500;
+      font-family:var(--font-display);animation:fadeSlideUp .8s var(--ease-expo) .2s both;
+    }
+
+    .hero-actions{
+      display:flex;align-items:center;justify-content:center;gap:14px;margin-top:28px;
+      animation:fadeSlideUp .8s var(--ease-expo) .3s both;
+    }
+    .btn-primary{
+      display:inline-flex;align-items:center;gap:8px;
+      background:var(--orange);color:#FFF;font-weight:700;font-size:14px;
+      padding:12px 28px;border-radius:100px;border:none;
+      font-family:var(--font-display);cursor:pointer;
+      transition:all .35s var(--ease-expo);
+      box-shadow:0 4px 24px rgba(255,91,30,.3);
+    }
+    .btn-primary:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 8px 40px rgba(255,91,30,.45)}
+
+    .btn-ghost{
+      display:inline-flex;align-items:center;gap:6px;
+      background:transparent;color:var(--muted);font-weight:600;font-size:13px;
+      padding:12px 22px;border-radius:100px;border:1px solid var(--border);
+      font-family:var(--font-display);cursor:pointer;transition:all .3s;
+    }
+    .btn-ghost:hover{color:#FFF;border-color:rgba(255,255,255,.15);transform:translateY(-2px)}
+
+    @keyframes fadeSlideUp{0%{opacity:0;transform:translateY(20px)}100%{opacity:1;transform:translateY(0)}}
+
+    /* ─── CATEGORY ROW ─── */
+    .cat-row{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+      gap:12px;margin:36px 0 50px;position:relative;z-index:2;
+    }
+    .cat-item{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:var(--radius-sm);padding:16px 8px;text-align:center;
+      cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;
+      transition:all .4s var(--ease-expo);position:relative;overflow:hidden;
+      backdrop-filter:blur(4px);
+    }
+    .cat-item::before{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,var(--orange-soft),transparent);
+      opacity:0;transition:opacity .5s;border-radius:inherit;
+    }
+    .cat-item:hover{transform:translateY(-6px) scale(1.02);border-color:var(--border-active);background:var(--card-hover);box-shadow:0 14px 36px rgba(0,0,0,.5)}
+    .cat-item:hover::before{opacity:1}
+
+    .cat-icon{
+      width:40px;height:40px;border-radius:var(--radius-xs);
+      background:var(--orange-soft);display:flex;align-items:center;justify-content:center;
+      transition:all .4s var(--ease-spring);position:relative;z-index:1;
+    }
+    .cat-item:hover .cat-icon{transform:scale(1.12) rotate(-5deg);background:rgba(255,91,30,.2)}
+    .cat-item span{font-size:11px;font-weight:600;color:var(--text);line-height:1.3;position:relative;z-index:1}
+
+    /* ─── SECTIONS ─── */
+    .wrap{max-width:1260px;margin:0 auto;padding:0 28px;position:relative;z-index:2}
+    .section{margin-bottom:60px;position:relative;z-index:2}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    .section-head h2{font-family:var(--font-display);font-size:clamp(18px,2.5vw,24px);font-weight:700;letter-spacing:-.3px}
+
+    .see-all{
+      font-size:12px;font-weight:600;color:var(--orange);cursor:pointer;
+      display:inline-flex;align-items:center;gap:4px;transition:gap .3s;
+    }
+    .see-all::after{content:'→';transition:transform .3s;display:inline-block}
+    .see-all:hover::after{transform:translateX(4px)}
+    .see-all:hover{gap:8px}
+
+    .reveal{opacity:0;transform:translateY(40px);transition:all .7s var(--ease-expo)}
+    .reveal.visible{opacity:1;transform:translateY(0)}
+
+    /* ─── 3D GALLERY BANNERS ─── */
+    .banner-row{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;
+      perspective:1000px;
+    }
+    .banner{
+      position:relative;overflow:hidden;padding:24px;border-radius:var(--radius);
+      border:1px solid var(--border);background:var(--card);
+      display:flex;flex-direction:column;justify-content:space-between;min-height:170px;
+      backdrop-filter:blur(4px);cursor:pointer;
+      transition:all .5s var(--ease-expo);transform-style:preserve-3d;
+    }
+    .banner:hover{transform:translateY(-6px) rotateX(2deg) rotateY(-2deg);border-color:var(--border-active);box-shadow:0 20px 50px rgba(0,0,0,.5),0 0 0 1px rgba(255,91,30,.05) inset}
+    .banner:nth-child(even):hover{transform:translateY(-6px) rotateX(2deg) rotateY(2deg)}
+
+    .banner .tag{
+      display:inline-block;font-size:9px;font-weight:700;font-family:var(--font-mono);
+      color:var(--orange);background:var(--orange-soft);
+      padding:3px 8px;border-radius:5px;width:fit-content;margin-bottom:10px;z-index:2;
+      transition:all .3s;
+    }
+    .banner:hover .tag{transform:scale(1.06);background:rgba(255,91,30,.18)}
+    .banner h3{font-family:var(--font-display);font-size:15px;font-weight:700;max-width:85%;z-index:2;line-height:1.25}
+    .banner .cta{font-size:12px;font-weight:700;color:var(--orange);margin-top:14px;z-index:2;display:flex;align-items:center;gap:4px;transition:gap .3s}
+    .banner:hover .cta{gap:10px}
+    .banner-icon{position:absolute;right:-6px;bottom:-6px;opacity:.08;z-index:1;transition:transform .6s var(--ease-expo),opacity .6s}
+    .banner:hover .banner-icon{transform:scale(1.15) rotate(-10deg);opacity:.16}
+
+    /* ─── SERVICE CARDS ─── */
+    .service-row{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;
+    }
+    .svc-card{
+      background:var(--card);border:1px solid var(--border);
+      border-radius:var(--radius-sm);padding:18px;display:flex;gap:14px;
+      transition:all .4s var(--ease-expo);position:relative;cursor:pointer;
+      backdrop-filter:blur(4px);overflow:hidden;
+    }
+    .svc-card::before{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(135deg,transparent 70%,rgba(255,91,30,.025));
+      opacity:0;transition:opacity .5s;
+    }
+    .svc-card:hover{transform:translateY(-5px);border-color:var(--border-active);background:var(--card-hover);box-shadow:0 14px 44px rgba(0,0,0,.5)}
+    .svc-card:hover::before{opacity:1}
+
+    .svc-thumb{
+      width:56px;height:56px;border-radius:var(--radius-xs);
+      background:rgba(255,255,255,.015);border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;flex-shrink:0;
+      position:relative;transition:all .4s var(--ease-spring);
+    }
+    .svc-card:hover .svc-thumb{transform:scale(1.08) rotate(-4deg);border-color:var(--border-active)}
+
+    .ev-badge{
+      position:absolute;top:-6px;right:-6px;background:var(--green);
+      color:#000;font-size:8px;font-weight:800;padding:2px 5px;border-radius:3px;
+      font-family:var(--font-mono);
+    }
+
+    .svc-body{display:flex;flex-direction:column;justify-content:center}
+    .svc-name{font-family:var(--font-display);font-size:13px;font-weight:700;margin-bottom:3px;transition:color .3s}
+    .svc-card:hover .svc-name{color:var(--orange)}
+    .svc-rating{font-size:11px;color:var(--muted);margin-bottom:4px}
+    .svc-rating b{color:#FFB238}
+    .svc-price{font-family:var(--font-mono);font-size:15px;font-weight:700;color:#FFF}
+    .svc-price .strike{text-decoration:line-through;color:var(--muted);font-size:12px;margin-left:5px;font-weight:400}
+
+    .svc-add-btn{
+      position:absolute;top:14px;right:14px;width:30px;height:30px;
+      border-radius:50%;border:1px solid var(--border);
+      background:rgba(255,255,255,.02);color:#FFF;display:flex;
+      align-items:center;justify-content:center;cursor:pointer;
+      transition:all .35s var(--ease-spring);font-size:15px;line-height:1;
+      font-family:var(--font-mono);z-index:2;
+    }
+    .svc-card:hover .svc-add-btn{border-color:var(--border-active);background:var(--orange-soft)}
+    .svc-add-btn:hover{background:var(--orange)!important;border-color:var(--orange)!important;transform:scale(1.15)!important;box-shadow:0 4px 16px rgba(255,91,30,.4)}
+    .svc-add-btn.added{background:var(--green);border-color:var(--green);transform:scale(1.1)}
+
+    /* ─── TRUST STRIP ─── */
+    .trust-strip{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:30px 24px;margin:50px 0 70px;
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:20px;text-align:center;backdrop-filter:blur(4px);
+      transition:border-color .4s;
+    }
+    .trust-strip:hover{border-color:rgba(255,255,255,.08)}
+    .trust-item .num{
+      font-family:var(--font-mono);font-size:30px;font-weight:700;
+      background:linear-gradient(135deg,var(--orange),var(--purple));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      margin-bottom:3px;transition:transform .4s var(--ease-spring);
+    }
+    .trust-item:hover .num{transform:scale(1.06)}
+    .trust-item .lbl{font-size:12px;color:var(--muted);line-height:1.4}
+
+    /* ─── CART SIDEBAR ─── */
+    .cart-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);
+      z-index:500;opacity:0;visibility:hidden;transition:all .4s;
+    }
+    .cart-overlay.open{opacity:1;visibility:visible}
+
+    .cart-sidebar{
+      position:fixed;top:0;right:0;width:400px;max-width:90vw;height:100vh;
+      background:var(--surface);border-left:1px solid var(--border);
+      z-index:501;transform:translateX(100%);transition:transform .5s var(--ease-expo);
+      display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(0,0,0,.7);
+    }
+    .cart-sidebar.open{transform:translateX(0)}
+
+    .cart-header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:22px 24px;border-bottom:1px solid var(--border);
+    }
+    .cart-header h3{font-family:var(--font-display);font-size:18px;font-weight:700}
+    .cart-close{
+      width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+      background:transparent;color:#FFF;display:flex;align-items:center;
+      justify-content:center;cursor:pointer;transition:all .3s;font-size:16px;
+    }
+    .cart-close:hover{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);transform:rotate(90deg)}
+
+    .cart-items{
+      flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:12px;
+    }
+    .cart-items::-webkit-scrollbar{width:3px}
+    .cart-items::-webkit-scrollbar-track{background:transparent}
+    .cart-items::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:4px}
+
+    .cart-empty{text-align:center;margin-top:60px;color:var(--muted)}
+    .cart-empty i{opacity:.25;margin-bottom:14px}
+    .cart-empty p{font-size:13px}
+
+    .cart-item{
+      display:flex;align-items:center;gap:12px;padding:12px 14px;
+      background:var(--card);border:1px solid var(--border);
+      border-radius:var(--radius-xs);transition:all .3s;
+      animation:slideInItem .4s var(--ease-expo) both;
+    }
+    @keyframes slideInItem{0%{opacity:0;transform:translateX(20px)}100%{opacity:1;transform:translateX(0)}}
+    .cart-item:hover{border-color:rgba(255,255,255,.08)}
+
+    .cart-item-info{flex:1}
+    .cart-item-name{font-size:12px;font-weight:600;margin-bottom:2px}
+    .cart-item-price{font-size:13px;font-family:var(--font-mono);color:var(--orange);font-weight:600}
+    .cart-item-qty{display:flex;align-items:center;gap:6px;margin-top:3px}
+    .cart-item-qty button{
+      width:24px;height:24px;border-radius:5px;border:1px solid var(--border);
+      background:rgba(255,255,255,.02);color:#FFF;display:flex;
+      align-items:center;justify-content:center;cursor:pointer;transition:all .25s;font-size:13px;
+    }
+    .cart-item-qty button:hover{background:var(--orange-soft);border-color:var(--border-active)}
+    .cart-item-qty span{font-size:12px;font-weight:600;min-width:18px;text-align:center}
+    .cart-item-remove{
+      width:26px;height:26px;border-radius:5px;border:none;
+      background:transparent;color:var(--muted);cursor:pointer;
+      transition:all .25s;display:flex;align-items:center;justify-content:center;
+    }
+    .cart-item-remove:hover{color:#EF4444;background:rgba(239,68,68,.08)}
+
+    .cart-footer{
+      padding:16px 24px 24px;border-top:1px solid var(--border);
+    }
+    .cart-total{
+      display:flex;justify-content:space-between;align-items:center;
+      font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:14px;
+    }
+    .cart-total span:last-child{color:var(--orange)}
+    .cart-checkout{
+      width:100%;padding:14px;border-radius:100px;border:none;
+      background:var(--orange);color:#FFF;font-size:14px;font-weight:700;
+      font-family:var(--font-display);cursor:pointer;
+      transition:all .35s var(--ease-expo);display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .cart-checkout:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(255,91,30,.35)}
+
+    /* ─── TOAST ─── */
+    .toast-container{
+      position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px;
+    }
+    .toast{
+      padding:12px 20px;border-radius:var(--radius-xs);
+      background:rgba(11,14,22,.92);backdrop-filter:blur(16px);
+      border:1px solid var(--border);color:#FFF;font-size:12px;font-weight:600;
+      box-shadow:0 8px 32px rgba(0,0,0,.6);display:flex;align-items:center;gap:10px;
+      animation:toastIn .4s var(--ease-spring);
+    }
+    .toast.removing{animation:toastOut .3s var(--ease-expo) both}
+    @keyframes toastIn{0%{opacity:0;transform:translateX(40px) scale(.9)}100%{opacity:1;transform:translateX(0) scale(1)}}
+    @keyframes toastOut{0%{opacity:1;transform:translateX(0) scale(1)}100%{opacity:0;transform:translateX(40px) scale(.9)}}
+    .toast-icon{color:var(--green);flex-shrink:0}
+
+    /* ─── FOOTER ─── */
+    footer{
+      background:rgba(4,5,7,.7);border-top:1px solid var(--border);
+      padding:56px 0 24px;position:relative;z-index:2;
+    }
+    .footer-grid{
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:36px;margin-bottom:36px;
+    }
+    .footer-grid h4{font-family:var(--font-display);font-size:13px;font-weight:700;margin-bottom:16px;color:#FFF}
+    .footer-grid a{
+      display:block;font-size:12px;color:var(--muted);margin-bottom:8px;
+      transition:color .25s,transform .25s;width:fit-content;
+    }
+    .footer-grid a:hover{color:#FFF;transform:translateX(4px)}
+    .social-icons{display:flex;gap:8px;margin-bottom:16px}
+    .social-icons a{
+      width:34px;height:34px;border-radius:var(--radius-xs);
+      background:rgba(255,255,255,.02);border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;
+      transition:all .3s;color:#FFF;
+    }
+    .social-icons a:hover{background:var(--orange-soft);border-color:var(--border-active);transform:translateY(-3px)}
+
+    .store-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(255,255,255,.02);border:1px solid var(--border);
+      border-radius:var(--radius-xs);padding:7px 14px;margin-bottom:8px;
+      cursor:pointer;transition:all .3s;min-width:130px;
+    }
+    .store-badge:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.1);transform:translateY(-2px)}
+    .store-badge .txt{font-size:11px;line-height:1.2}
+    .store-badge .small{font-size:8px;color:var(--muted)}
+    .store-badge .big{font-weight:700;color:#FFF}
+
+    .footer-bottom{
+      border-top:1px solid var(--border);padding-top:20px;
+      text-align:center;font-size:11px;color:var(--muted);font-family:var(--font-mono);
+    }
+
+    @media(max-width:1024px){
+      .header-tabs,.search-bar,.location{display:none}
+    }
+    @media(max-width:600px){
+      .header-inner{padding:0 18px;height:60px}
+      .hero{padding-top:100px}
+      .hero-drivemate h1{font-size:30px}
+      .hero-drivemate::before,.hero-drivemate::after{display:none}
+      .cat-row{grid-template-columns:repeat(4,1fr);gap:8px}
+      .cat-item{padding:12px 4px;border-radius:var(--radius-xs)}
+      .cat-item span{font-size:9px}
+      .banner-row,.service-row{grid-template-columns:1fr}
+      .trust-strip{grid-template-columns:repeat(3,1fr);padding:20px 14px}
+      .trust-item .num{font-size:24px}
+      .cart-sidebar{width:100vw;max-width:100vw}
+      .section-head h2{font-size:18px}
+      .wrap{padding:0 18px}
+      .hero-actions{flex-direction:column;gap:10px}
+      .btn-primary,.btn-ghost{width:100%;justify-content:center}
+    }
+    @media(max-width:400px){
+      .cat-row{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="scroll-progress" id="scrollProgress"></div>
+
+  <!-- Tool Particle Canvas -->
+  <canvas id="toolCanvas"></canvas>
+
+  <!-- ─── HEADER ─── -->
+  <header id="header">
+    <div class="header-inner">
+      <a class="logo" href="#">
+        <span class="logo-badge">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23FF5B1E'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='40' font-weight='800' font-family='sans-serif' fill='%23FFF'%3EDM%3C/text%3E%3C/svg%3E" alt="DriveMate">
+        </span>
+        DriveMate
+        <span class="logo-road"></span>
+      </a>
+
+      <nav class="header-tabs">
+        <div class="nav-item">
+          <span><span class="nav-dot"></span>2 Wheelers</span>
+          <div class="mega">
+            <div class="mega-col"><h5>Scooty</h5><a href="#">Honda</a><a href="#">TVS</a><a href="#">Suzuki</a><a href="#">Hero</a><a href="#">Vespa</a></div>
+            <div class="mega-col"><h5>Bike</h5><a href="#">Royal Enfield</a><a href="#">Bajaj</a><a href="#">Yamaha</a><a href="#">KTM</a><a href="#">Hero MotoCorp</a></div>
+          </div>
+        </div>
+        <div class="nav-item">
+          <span><span class="nav-dot"></span>4 Wheelers</span>
+          <div class="mega">
+            <div class="mega-col"><h5>Hatchback &amp; Sedan</h5><a href="#">Maruti Suzuki</a><a href="#">Hyundai</a><a href="#">Tata Motors</a><a href="#">Honda</a><a href="#">Toyota</a></div>
+            <div class="mega-col"><h5>SUV &amp; Premium</h5><a href="#">Mahindra</a><a href="#">Kia</a><a href="#">Skoda</a><a href="#">MG</a><a href="#">Renault</a></div>
+          </div>
+        </div>
+        <div class="nav-item"><span><span class="nav-dot"></span>CNG</span></div>
+        <div class="nav-item"><span><span class="nav-dot"></span>Electric</span></div>
+        <div class="nav-item"><span><span class="nav-dot"></span>Breakdown</span></div>
+        <div class="nav-item"><span><span class="nav-dot"></span>Home Service</span></div>
+      </nav>
+
+      <div class="location">
+        <i data-lucide="map-pin" style="width:13px;height:13px;color:var(--orange)"></i>
+        <b>Delhi NCR</b>
+        <i data-lucide="chevron-down" style="width:11px;height:11px;color:var(--muted)"></i>
+      </div>
+
+      <div class="search-bar">
+        <i data-lucide="search" style="width:13px;height:13px;color:var(--muted)"></i>
+        <span>"brake pad"</span>
+      </div>
+
+      <div class="header-right">
+        <button class="icon-btn" id="cartToggle" aria-label="Open cart">
+          <i data-lucide="shopping-bag" style="width:17px;height:17px"></i>
+          <span class="badge-dot" id="cartBadge">0</span>
+        </button>
+        <a class="avatar" href="#" aria-label="Account">
+          <i data-lucide="user" style="width:17px;height:17px"></i>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ─── CART SIDEBAR ─── -->
+  <div class="cart-overlay" id="cartOverlay"></div>
+  <div class="cart-sidebar" id="cartSidebar">
+    <div class="cart-header">
+      <h3>Your Service Cart</h3>
+      <button class="cart-close" id="cartClose" aria-label="Close cart">&times;</button>
+    </div>
+    <div class="cart-items" id="cartItems">
+      <div class="cart-empty">
+        <i data-lucide="shopping-bag" style="width:44px;height:44px;color:var(--muted)"></i>
+        <p>Nothing added yet.</p>
+      </div>
+    </div><div class="cart-footer" id="cartFooter" style="display:none">
+      <div class="cart-total">
+        <span>Total</span>
+        <span id="cartTotal">₹0</span>
+      </div>
+      <button class="cart-checkout">
+        <i data-lucide="zap" style="width:15px;height:15px"></i>
+        Book Services
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ─── MAIN ─── -->
+  <main>
+
+    <div class="wrap">
+
+      <!-- HERO -->
+      <section class="hero">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          #1 roadside partner — rated 4.8 ★
+        </div>
+        <div class="hero-drivemate">
+          <h1>DriveMate</h1>
+          <span class="hero-drivemate-road"></span>
+        </div>
+        <div class="sub">Vehicle repair at your doorstep. Book a pro in 30s.</div>
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="document.querySelector('.section')?.scrollIntoView({behavior:'smooth'})">
+            <i data-lucide="zap" style="width:16px;height:16px"></i>
+            Book a Service
+          </button>
+          <button class="btn-ghost">
+            <i data-lucide="play-circle" style="width:16px;height:16px"></i>
+            See how it works
+          </button>
+        </div>
+      </section>
+
+      <!-- CATEGORIES -->
+      <div class="cat-row reveal">
+        <div class="cat-item"><div class="cat-icon"><i data-lucide="bike" style="color:var(--orange)"></i></div><span>Bike &amp; Scooter</span></div>
+        <div class="cat-item"><div class="cat-icon"><i data-lucide="car" style="color:var(--orange)"></i></div><span>Car Service</span></div>
+        <div class="cat-item"><div class="cat-icon"><i data-lucide="zap" style="color:var(--orange)"></i></div><span>EV Battery</span></div>
+        <div class="cat-item"><div class="cat-icon"><i data-lucide="shield-check" style="color:var(--orange)"></i></div><span>Denting</span></div>
+        <div class="cat-item"><div class="cat-icon"><i data-lucide="sparkles" style="color:var(--orange)"></i></div><span>Wash &amp; Detail</span></div>
+        <div class="cat-item"><div class="cat-icon"><i data-lucide="disc" style="color:var(--orange)"></i></div><span>Tyres</span></div>
+        <div class="cat-item"><div class="cat-icon"><i data-lucide="life-buoy" style="color:var(--orange)"></i></div><span>Roadside Assist</span></div>
+        <div class="cat-item"><div class="cat-icon"><i data-lucide="wrench" style="color:var(--orange)"></i></div><span>Spare Parts</span></div>
+      </div>
+
+      <!-- SPOTLIGHT — 3D Gallery Banners -->
+      <div class="section reveal">
+        <div class="section-head"><h2>🔥 In the spotlight</h2></div>
+        <div class="banner-row">
+          <div class="banner">
+            <span class="tag">EV SPECIAL</span>
+            <h3>Free battery health check on every EV service</h3>
+            <span class="cta">Book now →</span>
+            <i data-lucide="zap" class="banner-icon" style="width:72px;height:72px"></i>
+          </div>
+          <div class="banner">
+            <span class="tag">MONSOON CARE</span>
+            <h3>20% off brake &amp; clutch inspection</h3>
+            <span class="cta">Book now →</span>
+            <i data-lucide="droplets" class="banner-icon" style="width:72px;height:72px"></i>
+          </div>
+          <div class="banner">
+            <span class="tag">NEW</span>
+            <h3>Doorstep tyre replacement, all brands</h3>
+            <span class="cta">Book now →</span>
+            <i data-lucide="disc" class="banner-icon" style="width:72px;height:72px"></i>
+          </div>
+          <div class="banner">
+            <span class="tag">SUBSCRIPTION</span>
+            <h3>DriveMate Care Plan — 3 services a year</h3>
+            <span class="cta">Explore →</span>
+            <i data-lucide="award" class="banner-icon" style="width:72px;height:72px"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- MOST BOOKED -->
+      <div class="section reveal">
+        <div class="section-head">
+          <h2>⚡ Most booked services</h2>
+          <span class="see-all">See all</span>
+        </div>
+        <div class="service-row" data-category="popular">
+          <div class="svc-card" data-name="Periodic bike service" data-price="699">
+            <div class="svc-thumb"><i data-lucide="clock" style="color:var(--orange)"></i></div>
+            <div class="svc-body">
+              <div class="svc-name">Periodic bike service</div>
+              <div class="svc-rating"><b>4.82</b> (312K)</div>
+              <div class="svc-price">₹699<span class="strike">₹899</span></div>
+            </div>
+            <button class="svc-add-btn" onclick="addToCart(this)" title="Add to cart">+</button>
+          </div>
+          <div class="svc-card" data-name="EV battery health diagnostics" data-price="399">
+            <div class="svc-thumb"><span class="ev-badge">EV</span><i data-lucide="battery-charging" style="color:var(--green)"></i></div>
+            <div class="svc-body">
+              <div class="svc-name">EV battery health diagnostics</div>
+              <div class="svc-rating"><b>4.79</b> (28K)</div>
+              <div class="svc-price">₹399</div>
+            </div>
+            <button class="svc-add-btn" onclick="addToCart(this)" title="Add to cart">+</button>
+          </div>
+          <div class="svc-card" data-name="Car AC service & gas top-up" data-price="899">
+            <div class="svc-thumb"><i data-lucide="fan" style="color:var(--orange)"></i></div>
+            <div class="svc-body">
+              <div class="svc-name">Car AC service &amp; gas top-up</div>
+              <div class="svc-rating"><b>4.75</b> (620K)</div>
+              <div class="svc-price">₹899</div>
+            </div>
+            <button class="svc-add-btn" onclick="addToCart(this)" title="Add to cart">+</button>
+          </div>
+          <div class="svc-card" data-name="Brake pad replacement" data-price="549">
+            <div class="svc-thumb"><i data-lucide="disc" style="color:var(--orange)"></i></div>
+            <div class="svc-body">
+              <div class="svc-name">Brake pad replacement</div>
+              <div class="svc-rating"><b>4.83</b> (96K)</div>
+              <div class="svc-price">₹549</div>
+            </div>
+            <button class="svc-add-btn" onclick="addToCart(this)" title="Add to cart">+</button>
+          </div>
+          <div class="svc-card" data-name="Car foam wash & interior vacuum" data-price="299">
+            <div class="svc-thumb"><i data-lucide="sparkles" style="color:var(--orange)"></i></div>
+            <div class="svc-body">
+              <div class="svc-name">Car foam wash &amp; interior vacuum</div>
+              <div class="svc-rating"><b>4.71</b> (210K)</div>
+              <div class="svc-price">₹299</div>
+            </div>
+            <button class="svc-add-btn" onclick="addToCart(this)" title="Add to cart">+</button>
+          </div>
+          <div class="svc-card" data-name="Tyre replacement (per tyre)" data-price="1499">
+            <div class="svc-thumb"><i data-lucide="circle-dot" style="color:var(--orange)"></i></div>
+            <div class="svc-body">
+              <div class="svc-name">Tyre replacement (per tyre)</div>
+              <div class="svc-rating"><b>4.68</b> (74K)</div>
+              <div class="svc-price">₹1,499</div>
+            </div>
+            <button class="svc-add-btn" onclick="addToCart(this)" title="Add to cart">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TWO-WHEELER -->
+      <div class="section reveal">
+        <div class="section-head">
+          <h2>🏍 Two-wheeler care</h2>
+          <span class="see-all">See all</span>
+        </div>
+        <div class="service-row" data-category="twowheeler">
+          <div class="svc-card" data-name="Chain lube & sprocket check" data-price="149">
+            <div class="svc-thumb"><i data-lucide="link" style="color:var(--orange)"></i></div>
+            <div class="svc-body"><div class="svc-name">Chain lube &amp; sprocket check</div><div class="svc-rating"><b>4.8</b> (54K)</div><div class="svc-price">₹149</div></div>
+            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
+          </div>
+          <div class="svc-card" data-name="E-scooter motor inspection" data-price="349">
+            <div class="svc-thumb"><span class="ev-badge">EV</span><i data-lucide="cpu" style="color:var(--green)"></i></div>
+            <div class="svc-body"><div class="svc-name">E-scooter motor inspection</div><div class="svc-rating"><b>4.77</b> (11K)</div><div class="svc-price">₹349</div></div>
+            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
+          </div>
+          <div class="svc-card" data-name="Clutch & cable adjustment" data-price="199">
+            <div class="svc-thumb"><i data-lucide="sliders" style="color:var(--orange)"></i></div>
+            <div class="svc-body"><div class="svc-name">Clutch &amp; cable adjustment</div><div class="svc-rating"><b>4.79</b> (38K)</div><div class="svc-price">₹199</div></div>
+            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
+          </div>
+          <div class="svc-card" data-name="Tubeless tyre puncture repair" data-price="99">
+            <div class="svc-thumb"><i data-lucide="life-buoy" style="color:var(--orange)"></i></div>
+            <div class="svc-body"><div class="svc-name">Tubeless tyre puncture repair</div><div class="svc-rating"><b>4.81</b> (67K)</div><div class="svc-price">₹99</div></div>
+            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOUR-WHEELER -->
+      <div class="section reveal">
+        <div class="section-head">
+          <h2>🚗 Four-wheeler care</h2>
+          <span class="see-all">See all</span>
+        </div>
+        <div class="service-row" data-category="fourwheeler">
+          <div class="svc-card" data-name="Full car service (petrol)" data-price="2499">
+            <div class="svc-thumb"><i data-lucide="car" style="color:var(--orange)"></i></div>
+            <div class="svc-body"><div class="svc-name">Full car service (petrol)</div><div class="svc-rating"><b>4.84</b> (188K)</div><div class="svc-price">₹2,499</div></div>
+            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
+          </div>
+          <div class="svc-card" data-name="EV charging port & cable check" data-price="449">
+            <div class="svc-thumb"><span class="ev-badge">EV</span><i data-lucide="plug-zap" style="color:var(--green)"></i></div>
+            <div class="svc-body"><div class="svc-name">EV charging port &amp; cable check</div><div class="svc-rating"><b>4.76</b> (9K)</div><div class="svc-price">₹449</div></div>
+            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
+          </div>
+          <div class="svc-card" data-name="Wheel alignment & balancing" data-price="599">
+            <div class="svc-thumb"><i data-lucide="compass" style="color:var(--orange)"></i></div>
+            <div class="svc-body"><div class="svc-name">Wheel alignment &amp; balancing</div><div class="svc-rating"><b>4.78</b> (142K)</div><div class="svc-price">₹599</div></div>
+            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
+          </div>
+          <div class="svc-card" data-name="Battery jumpstart & replacement" data-price="399">
+            <div class="svc-thumb"><i data-lucide="zap" style="color:var(--orange)"></i></div>
+            <div class="svc-body"><div class="svc-name">Battery jumpstart &amp; replacement</div><div class="svc-rating"><b>4.8</b> (61K)</div><div class="svc-price">₹399</div></div>
+            <button class="svc-add-btn" onclick="addToCart(this)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRUST STRIP -->
+      <div class="trust-strip reveal">
+        <div class="trust-item"><div class="num">4.8</div><div class="lbl">Average<br>service rating</div></div>
+        <div class="trust-item"><div class="num">2M+</div><div class="lbl">Vehicles<br>serviced</div></div>
+        <div class="trust-item"><div class="num">6,500+</div><div class="lbl">Certified<br>mechanics</div></div>
+        <div class="trust-item"><div class="num">30-day</div><div class="lbl">Service<br>warranty</div></div>
+        <div class="trust-item"><div class="num">45 min</div><div class="lbl">Average pickup<br>response</div></div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ─── FOOTER ─── -->
+  <footer>
+    <div class="wrap">
+      <div class="footer-logo" style="margin-bottom:24px">
+        <a class="logo" href="#">
+          <span class="logo-badge">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23FF5B1E'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='40' font-weight='800' font-family='sans-serif' fill='%23FFF'%3EDM%3C/text%3E%3C/svg%3E" alt="DriveMate">
+          </span>
+          DriveMate
+          <span class="logo-road"></span>
+        </a>
+      </div>
+      <div class="footer-grid">
+        <div>
+          <h4>Company</h4>
+          <a href="#">About us</a><a href="#">Investor relations</a><a href="#">Terms &amp; conditions</a><a href="#">Privacy policy</a><a href="#">Anti-discrimination policy</a><a href="#">Careers</a>
+        </div>
+        <div>
+          <h4>For customers</h4>
+          <a href="#">DriveMate reviews</a><a href="#">Categories near you</a><a href="#">Contact us</a>
+        </div>
+        <div>
+          <h4>For professionals</h4>
+          <a href="#">Register as a professional</a>
+        </div>
+        <div>
+          <h4>Social links</h4>
+          <div class="social-icons">
+            <a href="#" aria-label="X"><i data-lucide="twitter" style="width:15px;height:15px"></i></a>
+            <a href="#" aria-label="Facebook"><i data-lucide="facebook" style="width:15px;height:15px"></i></a>
+            <a href="#" aria-label="Instagram"><i data-lucide="instagram" style="width:15px;height:15px"></i></a>
+            <a href="#" aria-label="LinkedIn"><i data-lucide="linkedin" style="width:15px;height:15px"></i></a>
+          </div>
+          <div class="store-badge"><i data-lucide="apple" style="width:16px;height:16px"></i><span class="txt"><span class="small">Download on the</span><br><span class="big">App Store</span></span></div>
+          <div class="store-badge"><i data-lucide="play" style="width:16px;height:16px"></i><span class="txt"><span class="small">GET IT ON</span><br><span class="big">Google Play</span></span></div>
+        </div>
+      </div>
+      <div class="footer-bottom">&copy; 2026 DriveMate Technologies Pvt. Ltd. All rights reserved.</div>
+    </div>
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    // ─── TOOL PARTICLE CANVAS — 1000+ tiny mechanical tools ───
+    const canvas = document.getElementById('toolCanvas');
+    const ctx = canvas.getContext('2d');
+    let w, h, mouse = { x: -9999, y: -9999 };
+    let toolParticles = [];
+
+    const toolSvgs = [
+      '🔧','⚙️','🔩','🔨','🛠️','🔪','⛏️','🔩','⚡','🔌',
+      '🔧','⚙️','🔩','🔨','🛠️','🔪','⛏️','🔩','⚡','🔌',
+      '🔧','⚙️','🔩','🔨','🛠️','🔪','⛏️','🔩','⚡','🔌',
+      '🔧','⚙️','🔩','🔨','🛠️','🔪','⛏️','🔩','⚡','🔌'
+    ];
+
+    function resizeCanv(){
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+    }
+    resizeCanv();
+    window.addEventListener('resize', resizeCanv);
+
+    document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    document.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+
+    class ToolParticle {
+      constructor(){
+        this.reset();
+        this.tool = toolSvgs[Math.floor(Math.random() * toolSvgs.length)];
+      }
+      reset(){
+        this.x = Math.random() * w;
+        this.y = Math.random() * h;
+        this.size = Math.random() * 8 + 4;
+        this.speedX = (Math.random() - 0.5) * 0.5;
+        this.speedY = (Math.random() - 0.5) * 0.5;
+        this.opacity = Math.random() * 0.2 + 0.04;
+        this.rotation = Math.random() * Math.PI * 2;
+        this.rotSpeed = (Math.random() - 0.5) * 0.02;
+        this.bobPhase = Math.random() * Math.PI * 2;
+        this.bobAmp = Math.random() * 3;
+      }
+      update(){
+        this.x += this.speedX;
+        this.y += this.speedY + Math.sin(this.bobPhase) * 0.1;
+        this.bobPhase += 0.005;
+
+        if(this.x < -20 || this.x > w + 20) this.speedX *= -1;
+        if(this.y < -20 || this.y > h + 20) this.speedY *= -1;
+
+        // Repel from mouse
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 100){
+          const force = (100 - dist) / 100 * 1.8;
+          this.x -= (dx / dist) * force;
+          this.y -= (dy / dist) * force;
+          this.rotation += this.rotSpeed * 4;
+          this.opacity = Math.min(this.opacity + 0.01, 0.6);
+        } else {
+          this.opacity = Math.max(this.opacity - 0.002, 0.04);
+          this.rotation += this.rotSpeed;
+        }
+      }
+      draw(){
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.font = `${this.size}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.globalAlpha = this.opacity;
+        ctx.fillText(this.tool, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    // Spawn 1000+ tools
+    const toolCount = Math.min(1200, Math.floor(window.innerWidth * 0.8));
+    for(let i = 0; i < toolCount; i++){
+      toolParticles.push(new ToolParticle());
+    }
+
+    function animateTools(){
+      ctx.clearRect(0, 0, w, h);
+      toolParticles.forEach(p => { p.update(); p.draw(); });
+
+      // Subtle connections near mouse
+      for(let i = 0; i < toolParticles.length; i++){
+        const dx = mouse.x - toolParticles[i].x;
+        const dy = mouse.y - toolParticles[i].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 80){
+          for(let j = i+1; j < toolParticles.length; j++){
+            const dx2 = toolParticles[i].x - toolParticles[j].x;
+            const dy2 = toolParticles[i].y - toolParticles[j].y;
+            const dist2 = Math.sqrt(dx2*dx2 + dy2*dy2);
+            if(dist2 < 60){
+              ctx.beginPath();
+              ctx.moveTo(toolParticles[i].x, toolParticles[i].y);
+              ctx.lineTo(toolParticles[j].x, toolParticles[j].y);
+              ctx.strokeStyle = `rgba(255, 91, 30, ${Math.min(0.06, (1 - dist2/60) * 0.08)})`;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+      requestAnimationFrame(animateTools);
+    }
+    animateTools();
+
+    // ─── CART SYSTEM ───
+    let cart = JSON.parse(localStorage.getItem('driveMateCart')) || [];
+
+    function saveCart(){
+      localStorage.setItem('driveMateCart', JSON.stringify(cart));
+      updateCartUI();
+    }
+
+    function addToCart(btn){
+      const card = btn.closest('.svc-card');
+      if(!card) return;
+      const name = card.dataset.name;
+      const price = parseInt(card.dataset.price);
+
+      const existing = cart.find(item => item.name === name);
+      if(existing){
+        existing.qty += 1;
+      } else {
+        cart.push({ name, price, qty: 1 });
+      }
+      saveCart();
+      btn.classList.add('added');
+      btn.textContent = '✓';
+      setTimeout(() => { btn.classList.remove('added'); btn.textContent = '+'; }, 1200);
+
+      const badge = document.getElementById('cartBadge');
+      badge.classList.remove('bump');
+      void badge.offsetWidth;
+      badge.classList.add('bump');
+
+      showToast(`Added ${name} ✓`);
+    }
+
+    function removeFromCart(name){
+      cart = cart.filter(item => item.name !== name);
+      saveCart();
+    }
+
+    function updateQty(name, delta){
+      const item = cart.find(i => i.name === name);
+      if(!item) return;
+      item.qty += delta;
+      if(item.qty <= 0) cart = cart.filter(i => i.name !== name);
+      saveCart();
+    }
+
+    function updateCartUI(){
+      const container = document.getElementById('cartItems');
+      const footer = document.getElementById('cartFooter');
+      const totalSpan = document.getElementById('cartTotal');
+      const badge = document.getElementById('cartBadge');
+
+      const totalItems = cart.reduce((sum, i) => sum + i.qty, 0);
+      const totalPrice = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+      badge.textContent = totalItems;
+
+      if(cart.length === 0){
+        container.innerHTML = `<div class="cart-empty"><i data-lucide="shopping-bag" style="width:44px;height:44px;color:var(--muted)"></i><p>Nothing added yet.</p></div>`;
+        footer.style.display = 'none';
+        lucide.createIcons();
+        return;
+      }
+
+      footer.style.display = 'block';
+      totalSpan.textContent = `₹${totalPrice.toLocaleString('en-IN')}`;
+
+      container.innerHTML = cart.map((item, idx) => `
+        <div class="cart-item" style="animation-delay:${idx * 0.04}s">
+          <div class="cart-item-info">
+            <div class="cart-item-name">${item.name}</div>
+            <div class="cart-item-price">₹${item.price}</div>
+            <div class="cart-item-qty">
+              <button onclick="updateQty('${item.name.replace(/'/g, "\\'")}', -1)">−</button>
+              <span>${item.qty}</span>
+              <button onclick="updateQty('${item.name.replace(/'/g, "\\'")}', 1)">+</button>
+            </div>
+          </div>
+          <button class="cart-item-remove" onclick="removeFromCart('${item.name.replace(/'/g, "\\'")}')" title="Remove">
+            <i data-lucide="trash-2" style="width:14px;height:14px"></i>
+          </button>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function showToast(msg){
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `<i data-lucide="check-circle" class="toast-icon" style="width:16px;height:16px"></i> ${msg}`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    // Cart sidebar
+    const cartToggle = document.getElementById('cartToggle');
+    const cartClose = document.getElementById('cartClose');
+    const cartOverlay = document.getElementById('cartOverlay');
+    const cartSidebar = document.getElementById('cartSidebar');
+
+    function openCart(){
+      cartSidebar.classList.add('open');
+      cartOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeCart(){
+      cartSidebar.classList.remove('open');
+      cartOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    cartToggle.addEventListener('click', openCart);
+    cartClose.addEventListener('click', closeCart);
+    cartOverlay.addEventListener('click', closeCart);
+    document.addEventListener('keydown', e => { if(e.key === 'Escape') closeCart(); });
+
+    updateCartUI();
+
+    // ─── SCROLL PROGRESS ───
+    const scrollBar = document.getElementById('scrollProgress');
+    window.addEventListener('scroll', () => {
+      const h = document.documentElement;
+      const p = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+      scrollBar.style.width = p + '%';
+    });
+
+    // ─── HEADER HIDE/SHOW ───
+    let lastScroll = 0;
+    const header = document.getElementById('header');
+    window.addEventListener('scroll', () => {
+      const current = window.scrollY;
+      if(current > 80){
+        header.classList.add('scrolled');
+        if(current > lastScroll && current > 120){
+          header.classList.add('hidden');
+        } else {
+          header.classList.remove('hidden');
+        }
+      } else {
+        header.classList.remove('scrolled', 'hidden');
+      }
+      lastScroll = current;
+    });
+
+    // ─── SCROLL REVEAL ───
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+  </script>
+</body>
+</html>
